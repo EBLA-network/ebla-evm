@@ -921,16 +921,20 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 		if maxVotesWeigh == rewardsStats.TotalVotesWeight {
 			blockAuthorReward = bonusReward
 		} else {
-			twoTPlusOne := maxVotesWeigh*2/3 + 1
+			fiveOfEight := (maxVotesWeigh*5 + 7) / 8
 			bonusVotesWeight := uint64(0)
-			if rewardsStats.TotalVotesWeight >= twoTPlusOne {
-				bonusVotesWeight = rewardsStats.TotalVotesWeight - twoTPlusOne
+			if rewardsStats.TotalVotesWeight >= fiveOfEight {
+				bonusVotesWeight = rewardsStats.TotalVotesWeight - fiveOfEight
 			} else {
-				errorString := fmt.Sprintf("DistributeRewards - TotalVotesWeight (%d) is smaller than two twoTPlusOne (%d)", rewardsStats.TotalVotesWeight, twoTPlusOne)
+				errorString := fmt.Sprintf("DistributeRewards - TotalVotesWeight (%d) is smaller than fiveOfEight (%d)", rewardsStats.TotalVotesWeight, fiveOfEight)
 				fmt.Println(errorString)
 			}
-			// should be zero if rewardsStats.TotalVotesWeight == twoTPlusOne
-			blockAuthorReward.Div(new(uint256.Int).Mul(bonusReward, uint256.NewInt(uint64(bonusVotesWeight))), uint256.NewInt(uint64(maxVotesWeigh-twoTPlusOne)))
+			// should be zero if rewardsStats.TotalVotesWeight == fiveOfEight
+			if maxVotesWeigh > fiveOfEight {
+				blockAuthorReward.Div(new(uint256.Int).Mul(bonusReward, uint256.NewInt(uint64(bonusVotesWeight))), uint256.NewInt(uint64(maxVotesWeigh-fiveOfEight)))
+			} else {
+				blockAuthorReward = new(uint256.Int).Set(bonusReward)
+			}
 		}
 	}
 
