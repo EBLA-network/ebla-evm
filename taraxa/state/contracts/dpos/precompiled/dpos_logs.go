@@ -135,3 +135,18 @@ func (self *Logs) MakeValidatorInfoSetLog(account *common.Address) vm.LogRecord 
 
 	return *checkError(event.MakeLog(dpos_contract_address, account))
 }
+
+func (self *Logs) MakeInactivityPenaltyLog(validator *common.Address, new_factor uint64) vm.LogRecord {
+    event := self.Events["InactivityPenalty"]
+    return *checkError(event.MakeLog(dpos_contract_address, validator, new_factor))
+}
+
+func (self *Logs) MakeValidatorEvictedLog(validator *common.Address) vm.LogRecord {
+    event := self.Events["ValidatorEvicted"]
+    return *checkError(event.MakeLog(dpos_contract_address, validator))
+}
+
+func (self *Logs) MakeVotingPowerRecoveredLog(validator *common.Address) vm.LogRecord {
+    event := self.Events["VotingPowerRecovered"]
+    return *checkError(event.MakeLog(dpos_contract_address, validator))
+}

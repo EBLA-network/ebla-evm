@@ -81,6 +81,7 @@ var (
 				TrxMinGasPrice: 1000000000,
 				TrxMaxGasLimit: 1,
 			},
+			InactivityPenaltyBlock: 0,
 		},
 	}
 )

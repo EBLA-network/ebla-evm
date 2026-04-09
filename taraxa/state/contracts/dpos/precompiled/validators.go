@@ -230,6 +230,15 @@ func (self *Validators) GetValidatorRewards(validator_address *common.Address) (
 	return Get[ValidatorRewards](self, validator_address)
 }
 
+// ForEachValidator iterates all registered validator addresses in deterministic order.
+// Uses IterableMap which stores validators by insertion-order position index.
+func (self *Validators) ForEachValidator(cb func(addr common.Address)) {
+    self.validators_list.ForEach(func(addr common.Address) bool {
+        cb(addr)
+        return false // continue iteration
+    })
+}
+
 func (self *Validators) ModifyValidatorRewards(validator_address *common.Address, rewards *ValidatorRewards) {
 	Modify(self, validator_address, rewards)
 }

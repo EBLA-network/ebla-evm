@@ -137,6 +137,7 @@ var (
 				TrxMinGasPrice: 1000000000,
 				TrxMaxGasLimit: 1,
 			},
+			InactivityPenaltyBlock: 0,
 		},
 	}
 )
@@ -165,6 +166,7 @@ func CopyDefaultChainConfig() chain_config.ChainConfig {
 	new_cfg.DPOS.BlocksPerYear = DefaultChainCfg.DPOS.BlocksPerYear
 	new_cfg.DPOS.InitialValidators = DefaultChainCfg.DPOS.InitialValidators
 	new_cfg.Hardforks = DefaultChainCfg.Hardforks
+	new_cfg.Hardforks.InactivityPenaltyBlock = DefaultChainCfg.Hardforks.InactivityPenaltyBlock
 
 	return new_cfg
 }

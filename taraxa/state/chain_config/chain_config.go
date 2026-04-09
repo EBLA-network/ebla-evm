@@ -68,6 +68,7 @@ type HardforksConfig struct {
 	FicusHf                      FicusHfConfig
 	CornusHf                     CornusHfConfig
 	SoleiroliaHf                 SoleiroliaHfConfig
+	InactivityPenaltyBlock uint64  // Block at which inactivity penalty activates (0 for EBLA genesis)
 }
 
 func (c *HardforksConfig) IsOnFixClaimAllHardfork(block types.BlockNum) bool {
@@ -163,4 +164,8 @@ func (self *ChainConfig) GenesisBalancesSum() *big.Int {
 	}
 
 	return sum
+}
+
+func (c *HardforksConfig) IsOnInactivityPenaltyHardfork(block types.BlockNum) bool {
+    return block >= c.InactivityPenaltyBlock
 }

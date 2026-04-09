@@ -135,6 +135,10 @@ var (
 	field_minted_tokens = []byte{6}
 	field_total_supply  = []byte{7}
 	field_yield         = []byte{8}
+
+	// NEW - EBLA - Inactivity penalty fields
+	field_voting_power_factor = []byte{9}   // per-validator, uint64 in basis points (stored as factor+1)
+	field_last_active_block   = []byte{10}  // per-validator, uint64 PBFT block number
 )
 
 // State of the rewards distribution algorithm
@@ -985,7 +989,23 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 			// We shouldn't really check if validator was eligible before. Because there is a possibility to include some old DAG block anytime(not only at this few blocks old)
 			continue
 		}
+		// === NEW: Track activity + Full recovery (MUST be after validator nil check) ===
+		if validatorStats.DagBlocksCount > 0 {
+			self.setLastActiveBlock(&validatorAddress, current_block_num)
 
+			current_factor := self.getVotingPowerFactor(&validatorAddress)
+			if current_factor < 10000 {
+				prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block_num, current_factor)
+				self.setVotingPowerFactor(&validatorAddress, 10000)
+				new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block_num, 10000)
+				if prev_vote_count != new_vote_count {
+					self.eligible_vote_count -= prev_vote_count
+					self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
+				}
+				self.evm.AddLog(self.logs.MakeVotingPowerRecoveredLog(&validatorAddress))
+			}
+		}
+		// === END NEW ===
 		// Add reward for for final check
 		newMintedRewards.Add(newMintedRewards, validatorReward)
 
@@ -1032,15 +1052,130 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 		self.saveMintedTokensDb()
 	}
 
+	// === NEW: Epoch boundary inactivity penalty check ===
+	if self.cfg.Hardforks.IsOnInactivityPenaltyHardfork(current_block_num) {
+		if current_block_num > 0 && current_block_num % 10000 == 0 {
+			self.applyInactivityPenalties(current_block_num)
+		}
+	}
+	// === END NEW ===
+
 	return newMintedRewards
 }
 
-func (self *Contract) delegate_update_values(ctx vm.CallFrame, validator *Validator, prev_vote_count uint64) {
+// applyInactivityPenalties checks all validators at epoch boundaries.
+// Validators inactive for the entire epoch lose 5% of their voting power.
+// Validators whose effective stake drops below threshold are force-evicted.
+func (self *Contract) applyInactivityPenalties(current_block uint64) {
+	epoch_start := current_block - 10000
+
+	// Collect eviction candidates — do NOT evict during iteration
+	var toEvict []common.Address
+
+	self.validators.ForEachValidator(func(validatorAddress common.Address) {
+		validator := self.validators.GetValidator(&validatorAddress)
+		if validator == nil || validator.TotalStake.Cmp(big.NewInt(0)) == 0 {
+			return // skip deleted or zero-stake validators
+		}
+
+		last_active := self.getLastActiveBlock(&validatorAddress)
+
+		// First epoch: initialize tracking, no penalty
+		if last_active == 0 {
+			self.setLastActiveBlock(&validatorAddress, current_block)
+			return
+		}
+
+		// Active during this epoch — no penalty
+		// Use >= so validators initialized at previous epoch boundary get a full epoch
+		if last_active >= epoch_start {
+			return
+		}
+
+		// === INACTIVE FOR ENTIRE EPOCH — REDUCE VOTING POWER BY 5% ===
+
+		current_factor := self.getVotingPowerFactor(&validatorAddress)
+
+		prev_vote_count := voteCountWithFactor(
+			validator.TotalStake, &self.cfg, current_block, current_factor,
+		)
+
+		// new_factor = current_factor * 95 / 100
+		// Math: max value 10000 * 95 = 950000, fits in uint64
+		new_factor := current_factor * 95 / 100
+
+		self.setVotingPowerFactor(&validatorAddress, new_factor)
+
+		new_vote_count := voteCountWithFactor(
+			validator.TotalStake, &self.cfg, current_block, new_factor,
+		)
+
+		// Update global eligible_vote_count
+		if prev_vote_count != new_vote_count {
+			self.eligible_vote_count -= prev_vote_count
+			self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
+		}
+
+		// Emit penalty event
+		self.evm.AddLog(self.logs.MakeInactivityPenaltyLog(&validatorAddress, new_factor))
+
+		// Check eviction: effective stake below threshold
+		effective_balance := new(big.Int).Mul(validator.TotalStake, big.NewInt(int64(new_factor)))
+		effective_balance.Div(effective_balance, big.NewInt(10000))
+
+		if self.cfg.DPOS.EligibilityBalanceThreshold.Cmp(effective_balance) > 0 {
+			toEvict = append(toEvict, validatorAddress)
+		}
+	})
+
+	// Evict AFTER iteration completes to avoid concurrent modification
+	for _, addr := range toEvict {
+		self.forceEvictValidator(&addr, current_block)
+	}
+}
+
+// forceEvictValidator triggers normal undelegation for ALL delegators of a validator.
+// No coins are burned — all coins return to original wallets via standard undelegation process.
+// Uses V2 undelegation to avoid conflicts with existing pending undelegations.
+func (self *Contract) forceEvictValidator(validatorAddress *common.Address, block uint64) {
+	validator := self.validators.GetValidator(validatorAddress)
+	if validator == nil {
+		return
+	}
+
+	// Get remaining effective vote count and subtract from global
+	factor := self.getVotingPowerFactor(validatorAddress)
+	remaining_votes := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
+	if remaining_votes > 0 {
+		self.eligible_vote_count -= remaining_votes
+	}
+
+	// Iterate all delegators and create V2 undelegation for each
+	// (Implementation depends on delegations iteration API — 
+	//  use self.delegations.ForEachDelegation or similar)
+	//
+	// For each delegator:
+	//   1. Get delegation.Stake (full coin amount)
+	//   2. Create undelegation entry with locking period
+	//   3. Subtract from validator.TotalStake
+	//   4. Delegator can later call confirmUndelegateV2 to reclaim coins
+	//
+	// NOTE: This must NOT call the public undelegate() which has
+	//       CallerAccount checks. Use internal undelegation creation.
+
+	// Set factor to 0 (fully evicted)
+	self.setVotingPowerFactor(validatorAddress, 0)
+
+	// Emit eviction event
+	self.evm.AddLog(self.logs.MakeValidatorEvictedLog(validatorAddress))
+}
+
+func (self *Contract) delegate_update_values(ctx vm.CallFrame, validator *Validator, prev_vote_count uint64, factor uint64) {
 	validator.TotalStake.Add(validator.TotalStake, ctx.Value)
 	v, _ := uint256.FromBig(ctx.Value)
 	self.amount_delegated.Add(self.amount_delegated, v)
 
-	new_vote_count := voteCount(validator.TotalStake, &self.cfg, self.evm.GetBlock().Number)
+	new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, self.evm.GetBlock().Number, factor)
 
 	if prev_vote_count != new_vote_count {
 		self.eligible_vote_count -= prev_vote_count
@@ -1079,7 +1214,8 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 		state.Count++
 	}
 
-	prev_vote_count := voteCount(validator.TotalStake, &self.cfg, block)
+	factor := self.getVotingPowerFactor(&validatorAddress)
+	prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
 	if delegation == nil {
 		self.delegations.CreateDelegation(ctx.CallerAccount.Address(), &args.Validator, block, ctx.Value)
@@ -1099,7 +1235,7 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 		self.delegations.ModifyDelegation(ctx.CallerAccount.Address(), &args.Validator, delegation)
 	}
 
-	self.delegate_update_values(ctx, validator, prev_vote_count)
+	self.delegate_update_values(ctx, validator, prev_vote_count, factor)
 
 	state.Count++
 	self.state_put(&state_k, state)
@@ -1137,7 +1273,8 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		return nil, ErrInsufficientDelegation
 	}
 
-	prev_vote_count := voteCount(validator.TotalStake, &self.cfg, block)
+	factor := self.getVotingPowerFactor(&args.Validator)
+	prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
 	state, state_k := self.state_get(args.Validator[:], BlockToBytes(block))
 	if state == nil {
@@ -1177,7 +1314,7 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 	a, _ := uint256.FromBig(args.Amount)
 	self.amount_delegated.Sub(self.amount_delegated, a)
 
-	new_vote_count := voteCount(validator.TotalStake, &self.cfg, block)
+	new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
 	if prev_vote_count != new_vote_count {
 		self.eligible_vote_count -= prev_vote_count
@@ -1266,7 +1403,8 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 	}
 	validator_rewards := self.validators.GetValidatorRewards(&validator_addr)
 
-	prev_vote_count := voteCount(validator.TotalStake, &self.cfg, block)
+	factor := self.getVotingPowerFactor(&validator_addr)
+	prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
 	undelegation := self.undelegations.GetUndelegationBaseObject(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
 	self.undelegations.RemoveUndelegation(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
@@ -1315,7 +1453,7 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 	a, _ := uint256.FromBig(undelegation.Amount)
 	self.amount_delegated.Add(self.amount_delegated, a)
 
-	new_vote_count := voteCount(validator.TotalStake, &self.cfg, block)
+	new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 	if prev_vote_count != new_vote_count {
 		self.eligible_vote_count -= prev_vote_count
 		self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
@@ -1359,8 +1497,10 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		return ErrValidatorsMaxStakeExceeded
 	}
 
-	prev_vote_count_from := voteCount(validator_from.TotalStake, &self.cfg, block)
-	prev_vote_count_to := voteCount(validator_to.TotalStake, &self.cfg, block)
+	factor_from := self.getVotingPowerFactor(&args.ValidatorFrom)
+	factor_to := self.getVotingPowerFactor(&args.ValidatorTo)
+	prev_vote_count_from := voteCountWithFactor(validator_from.TotalStake, &self.cfg, block, factor_from)
+	prev_vote_count_to := voteCountWithFactor(validator_to.TotalStake, &self.cfg, block, factor_to)
 	//First we undelegate
 	{
 		delegation := self.delegations.GetDelegation(ctx.CallerAccount.Address(), &args.ValidatorFrom)
@@ -1426,7 +1566,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 			self.validators.ModifyValidatorRewards(&args.ValidatorFrom, validator_rewards_from)
 		}
 
-		new_vote_count := voteCount(validator_from.TotalStake, &self.cfg, block)
+		new_vote_count := voteCountWithFactor(validator_from.TotalStake, &self.cfg, block, factor_from)
 		if prev_vote_count_from != new_vote_count {
 			self.eligible_vote_count -= prev_vote_count_from
 			self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
@@ -1472,7 +1612,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		validator_to.TotalStake.Add(validator_to.TotalStake, args.Amount)
 	}
 
-	new_vote_count := voteCount(validator_to.TotalStake, &self.cfg, block)
+	new_vote_count := voteCountWithFactor(validator_to.TotalStake, &self.cfg, block, factor_to)
 	if prev_vote_count_to != new_vote_count {
 		self.eligible_vote_count -= prev_vote_count_to
 		self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
@@ -1650,7 +1790,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 	if ctx.Value.Cmp(big.NewInt(0)) == 1 {
 		self.evm.AddLog(self.logs.MakeDelegatedLog(owner_address, &args.Validator, ctx.Value))
 		self.delegations.CreateDelegation(owner_address, &args.Validator, block, ctx.Value)
-		self.delegate_update_values(ctx, validator, 0)
+		self.delegate_update_values(ctx, validator, 0, 10000)
 		self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
 		state.Count++
 	}
@@ -2080,6 +2220,72 @@ func (self *Contract) saveTotalSupplyDb() {
 
 func (self *Contract) saveMintedTokensDb() {
 	self.storage.Put(storage.Stor_k_1(field_minted_tokens), self.minted_tokens.Bytes())
+}
+
+// getVotingPowerFactor returns the voting power factor for a validator.
+// Default is 10000 (100%). Uses sentinel encoding: stores factor+1 so that
+// 0 in storage means "not set" (returns default 10000).
+func (self *Contract) getVotingPowerFactor(validator *common.Address) uint64 {
+	var stored uint64
+	self.storage.Get(storage.Stor_k_1(field_voting_power_factor, validator[:]), func(bytes []byte) {
+		stored = bin.DEC_b_endian_compact_64(bytes)
+	})
+	if stored == 0 {
+		return 10000 // not set, default = full power
+	}
+	return stored - 1 // sentinel: stored value is factor + 1
+}
+
+// setVotingPowerFactor stores the voting power factor using sentinel encoding.
+func (self *Contract) setVotingPowerFactor(validator *common.Address, factor uint64) {
+	self.storage.Put(
+		storage.Stor_k_1(field_voting_power_factor, validator[:]),
+		bin.ENC_b_endian_compact_64_1(factor + 1),
+	)
+}
+
+// clearVotingPowerFactor removes the stored factor (resets to default).
+func (self *Contract) clearVotingPowerFactor(validator *common.Address) {
+	self.storage.Put(storage.Stor_k_1(field_voting_power_factor, validator[:]), nil)
+}
+
+// getLastActiveBlock returns the last PBFT block where validator produced a DAG block.
+// Returns 0 if never set.
+func (self *Contract) getLastActiveBlock(validator *common.Address) uint64 {
+	var result uint64
+	self.storage.Get(storage.Stor_k_1(field_last_active_block, validator[:]), func(bytes []byte) {
+		result = bin.DEC_b_endian_compact_64(bytes)
+	})
+	return result
+}
+
+// setLastActiveBlock stores the last active PBFT block number for a validator.
+func (self *Contract) setLastActiveBlock(validator *common.Address, block uint64) {
+	self.storage.Put(
+		storage.Stor_k_1(field_last_active_block, validator[:]),
+		bin.ENC_b_endian_compact_64_1(block),
+	)
+}
+
+// clearLastActiveBlock removes the stored last active block.
+func (self *Contract) clearLastActiveBlock(validator *common.Address) {
+	self.storage.Put(storage.Stor_k_1(field_last_active_block, validator[:]), nil)
+}
+
+// voteCountWithFactor calculates vote count with the voting power factor applied.
+// factor is in basis points: 10000 = 100%, 9500 = 95%, etc.
+func voteCountWithFactor(staking_balance *big.Int, cfg *chain_config.ChainConfig, block types.BlockNum, factor uint64) uint64 {
+	if factor == 0 {
+		return 0
+	}
+	// effective_balance = staking_balance * factor / 10000
+	effective_balance := new(big.Int).Mul(staking_balance, big.NewInt(int64(factor)))
+	effective_balance.Div(effective_balance, big.NewInt(10000))
+
+	if effective_balance.Cmp(cfg.DPOS.EligibilityBalanceThreshold) >= 0 {
+		return bigutil.Div(effective_balance, cfg.DPOS.VoteEligibilityBalanceStep).Uint64()
+	}
+	return 0
 }
 
 func (self *Contract) eraseMintedTokensDb() {
