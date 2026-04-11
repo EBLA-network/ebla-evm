@@ -2948,3 +2948,34 @@ func TestMinimumCommission(t *testing.T) {
 		test.Pack("setCommission", val_addr, uint16(1000)),
 		util.ErrorString(""), util.ErrorString(""))
 }
+
+func TestCancelUndelegateMaxStake(t *testing.T) {
+    _, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.TaraxaDposClientMetaData, t, CopyDefaultChainConfig())
+    defer test.End()
+
+    val_owner := addr(1)
+    val_addr, proof := generateAddrAndProof()
+    delegator_addr := addr(2)
+    delegation := DefaultValidatorMaximumStake
+
+    // Register validator with max stake
+    test.ExecuteAndCheck(val_owner, delegation, test.Pack("registerValidator",
+        val_addr, proof, DefaultVrfKey, uint16(1000), "test", "test"),
+        util.ErrorString(""), util.ErrorString(""))
+
+    // Delegator A undelegates some amount
+    undelegate_amount := DefaultMinimumDeposit
+    test.ExecuteAndCheck(val_owner, big.NewInt(0), test.Pack("undelegate",
+        val_addr, undelegate_amount),
+        util.ErrorString(""), util.ErrorString(""))
+
+    // Delegator B fills the gap back to max
+    test.ExecuteAndCheck(delegator_addr, undelegate_amount, test.Pack("delegate",
+        val_addr),
+        util.ErrorString(""), util.ErrorString(""))
+
+    // Delegator A tries to cancel undelegate — should FAIL (would exceed max)
+    test.ExecuteAndCheck(val_owner, big.NewInt(0), test.Pack("cancelUndelegate",
+        val_addr),
+        dpos.ErrValidatorsMaxStakeExceeded, util.ErrorString(""))
+}

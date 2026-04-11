@@ -1446,6 +1446,14 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 		delegation.LastUpdated = block
 		self.delegations.ModifyDelegation(ctx.CallerAccount.Address(), &validator_addr, delegation)
 	}
+	// --- BEGIN EBLA MAX STAKE CHECK ---
+	// Prevent cancelUndelegate from pushing validator above maximum stake cap.
+	// Without this check, an attacker can: undelegate -> let others fill the cap -> cancelUndelegate
+	// to exceed ValidatorMaximumStake.
+	if self.cfg.DPOS.ValidatorMaximumStake.Cmp(bigutil.Add(undelegation.Amount, validator.TotalStake)) == -1 {
+		return ErrValidatorsMaxStakeExceeded
+	}
+	// --- END EBLA MAX STAKE CHECK ---
 	validator.TotalStake.Add(validator.TotalStake, undelegation.Amount)
 
 	// validator.UndelegationsCount might be == 0 if all delegators undelegated from the validator before magnolia hardfork
