@@ -91,10 +91,10 @@ type GenesisBalances = map[common.Address]*big.Int
 var (
 	TaraPrecision                      = big.NewInt(1e+18)
 	DefaultBalance                     = bigutil.Mul(big.NewInt(2050000000), TaraPrecision)
-	DefaultEligibilityBalanceThreshold = bigutil.Mul(big.NewInt(1000000), TaraPrecision)
+	DefaultEligibilityBalanceThreshold = bigutil.Mul(big.NewInt(5000), TaraPrecision)
 	DefaultVoteEligibilityBalanceStep  = bigutil.Mul(big.NewInt(1000), TaraPrecision)
 	DefaultValidatorMaximumStake       = bigutil.Mul(big.NewInt(10000000), TaraPrecision)
-	DefaultMinimumDeposit              = bigutil.Mul(big.NewInt(1000), TaraPrecision)
+	DefaultMinimumDeposit              = bigutil.Mul(big.NewInt(100), TaraPrecision)
 	DefaultVrfKey                      = common.RightPadBytes([]byte("0x0"), 32)
 
 	DefaultChainCfg = chain_config.ChainConfig{
