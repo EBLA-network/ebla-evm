@@ -88,6 +88,7 @@ var (
 	ErrWrongOwnerAcc                = util.ErrorString("This account is not owner of specified validator")
 	ErrWrongVrfKey                  = util.ErrorString("Wrong vrf key specified in validator arguments")
 	ErrForbiddenCommissionChange    = util.ErrorString("Forbidden commission change")
+	ErrCommissionBelowMinimum       = util.ErrorString("Commission is below minimum of 10%")
 	ErrCommissionOverflow           = util.ErrorString("Commission is bigger than maximum value")
 	ErrMaxEndpointLengthExceeded    = util.ErrorString("Max endpoint length exceeded")
 	ErrMaxDescriptionLengthExceeded = util.ErrorString("Max description length exceeded")
@@ -104,6 +105,9 @@ const (
 
 	// Maximal commission  [%] * 100 so 1% is 100 & 100% is 10000
 	MaxCommission = uint64(10000)
+
+	// Minimal commission [%] * 100 so 10% is 1000
+	MinimumCommission uint16 = 1000
 
 	// Length of vrf public key
 	VrfKeyLength = 32
@@ -1758,7 +1762,6 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 	if MaxCommission < uint64(args.Commission) {
 		return ErrCommissionOverflow
 	}
-
 	if self.validators.ValidatorExists(&args.Validator) {
 		return ErrExistentValidator
 	}
@@ -1849,7 +1852,9 @@ func (self *Contract) setCommission(ctx vm.CallFrame, block types.BlockNum, args
 	if MaxCommission < uint64(args.Commission) {
 		return ErrCommissionOverflow
 	}
-
+	if args.Commission < MinimumCommission {
+		return ErrCommissionBelowMinimum
+	}
 	validator := self.validators.GetValidator(&args.Validator)
 	if validator == nil {
 		return ErrNonExistentValidator
