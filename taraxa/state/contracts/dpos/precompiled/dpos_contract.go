@@ -889,6 +889,8 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 // - Bonus reward is theoretical and it will be added to block proposer (author) only when all votes are included
 // - If less reward votes are included, rest of the bonus reward it is just burned
 // - Then for each validator vote and transaction proportion rewards are calculated and distributed
+// EBLA: All hardforks active from block 0. The else branch
+// (pre-Aspen fixed yield) is dead code on EBLA mainnet.
 
 func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats) *uint256.Int {
 	// When calling DistributeRewards, internal structures must be always initialized

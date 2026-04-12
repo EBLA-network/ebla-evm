@@ -54,8 +54,8 @@ var (
 			CommissionChangeFrequency:   0,
 			DelegationDelay:             2,
 			DelegationLockingPeriod:     4,
-			BlocksPerYear:               365 * 24 * 60 * 15, // block every 4 seconds
-			YieldPercentage:             20,
+			BlocksPerYear:               6709787, // 31536000000 / 4700 (EBLA: lambda=2000, block=4.7s)
+			YieldPercentage:             7,
 		},
 		Hardforks: chain_config.HardforksConfig{
 			FixRedelegateBlockNum: 0,

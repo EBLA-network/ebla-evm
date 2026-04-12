@@ -110,8 +110,8 @@ var (
 			CommissionChangeFrequency:   0,
 			DelegationDelay:             2,
 			DelegationLockingPeriod:     4,
-			BlocksPerYear:               365 * 24 * 60 * 15, // block every 4 seconds
-			YieldPercentage:             20,
+			BlocksPerYear:               6709787, // 31536000000 / 4700 (EBLA: lambda=2000, block=4.7s)
+			YieldPercentage:             7,
 		},
 		Hardforks: chain_config.HardforksConfig{
 			FixRedelegateBlockNum: 0,
@@ -944,53 +944,59 @@ func TestUndelegateMin(t *testing.T) {
 }
 
 func TestYieldCurveAspenHf(t *testing.T) {
-	cfg := CopyDefaultChainConfig()
-	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.TaraxaDposClientMetaData, t, cfg)
-	defer test.End()
+	tc := test_common.NewTestCase(t)
+	cfg := DefaultChainCfg
+	tc.End()
 
 	var yield_curve dpos.YieldCurve
 	yield_curve.Init(cfg)
 
-	// yield = (max supply - total supply) / total supply
-	// block reward = yield * total stake / blocks per year
-
-	// max supply has hardcoded value of 12 Billion TARA
-	// total supply = 10 Billion, total stake = 1 Billion, expected yield == 20%
-	total_supply := new(uint256.Int).Mul(uint256.NewInt(10e+9), uint256.NewInt(1e+18))
+	total_supply := new(uint256.Int).Mul(uint256.NewInt(5e+9), uint256.NewInt(1e+18))
 	total_stake := new(uint256.Int).Mul(uint256.NewInt(1e+9), uint256.NewInt(1e+18))
-	expected_yield := uint256.NewInt(200000)
+
+	// Epoch 0 (block 0): yield = 7.000% = 70000
+	expected_yield := uint256.NewInt(70000)
 	expected_block_reward := calculateExpectedBlockReward(total_stake, expected_yield, cfg)
-	block_reward, yield := yield_curve.CalculateBlockReward(total_stake, total_supply)
-
-	tc.Assert.Equal(expected_block_reward, block_reward)
+	block_reward, yield := yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(0))
 	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
 
-	// max supply = 12 Billion, total supply = 11 Billion, total stake = 1 Billion, expected yield == 9,0909%
-	total_supply = new(uint256.Int).Mul(uint256.NewInt(11e+9), uint256.NewInt(1e+18))
-	expected_yield = uint256.NewInt(90909)
+	// Epoch 1 (block 10M): yield = 66500
+	expected_yield = uint256.NewInt(66500)
 	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
-	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply)
-
-	tc.Assert.Equal(expected_block_reward, block_reward)
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(10_000_000))
 	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
 
-	// max supply = 12 Billion, total supply = 11.5 Billion, total stake = 1 Billion, expected yield == 4,3478%
-	total_supply = new(uint256.Int).Mul(uint256.NewInt(115e+8), uint256.NewInt(1e+18))
-	expected_yield = uint256.NewInt(43478)
+	// Epoch 4 (block 40M): yield = 57015
+	expected_yield = uint256.NewInt(57015)
 	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
-	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply)
-
-	tc.Assert.Equal(expected_block_reward, block_reward)
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(40_000_000))
 	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
 
-	// max supply = 12 Billion, total supply = 12 Billion, total stake = 1 Billion, expected yield == 0%
-	total_supply = new(uint256.Int).Mul(uint256.NewInt(12e+9), uint256.NewInt(1e+18))
-	expected_yield = uint256.NewInt(0)
+	// Epoch 36 (MaxEpoch, block 360M): yield = 11044
+	expected_yield = uint256.NewInt(11044)
 	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
-	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply)
-
-	tc.Assert.Equal(expected_block_reward, block_reward)
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(360_000_000))
 	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
+
+	// Epoch 37+ (beyond MaxEpoch): yield = floor = 10000
+	expected_yield = uint256.NewInt(10000)
+	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(370_000_000))
+	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
+
+	// Far future (epoch 100): still at floor
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(1_000_000_000))
+	tc.Assert.Equal(uint256.NewInt(10000), yield)
+
+	// Zero delegation: reward = 0, yield still computed
+	block_reward, yield = yield_curve.CalculateBlockReward(uint256.NewInt(0), total_supply, uint64(0))
+	tc.Assert.Equal(uint256.NewInt(0), block_reward)
+	tc.Assert.Equal(uint256.NewInt(70000), yield)
 }
 
 func calculateExpectedBlockReward(total_stake *uint256.Int, expected_yield *uint256.Int, cfg chain_config.ChainConfig) *uint256.Int {
@@ -1002,9 +1008,9 @@ func calculateExpectedBlockReward(total_stake *uint256.Int, expected_yield *uint
 func TestAspenHf(t *testing.T) {
 	// Test if generated block reward changed from fixed yield to the new dynamic yield curve
 	cfg := CopyDefaultChainConfig()
-	cfg.Hardforks.AspenHf.BlockNumPartOne = 5
-	cfg.Hardforks.AspenHf.BlockNumPartTwo = 10
-	cfg.Hardforks.AspenHf.GeneratedRewards = bigutil.Mul(big.NewInt(5000000), big.NewInt(1e18)) // 5M TARA
+	cfg.Hardforks.AspenHf.BlockNumPartOne = 0
+	cfg.Hardforks.AspenHf.BlockNumPartTwo = 0
+	cfg.Hardforks.AspenHf.GeneratedRewards = big.NewInt(0)
 
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.TaraxaDposClientMetaData, t, cfg)
 	defer test.End()
@@ -1062,13 +1068,13 @@ func TestAspenHf(t *testing.T) {
 
 	// Expected block reward
 	var yield_curve dpos.YieldCurve
-	yield_curve.Init(cfg)
+	expected_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256, uint64(block_n))
 
 	// Advance couple of blocks - after aspen.PartTwo hf with dynamic yield
 	for block_n := test.BlockNumber(); block_n < cfg.Hardforks.AspenHf.BlockNumPartTwo+20; block_n++ {
 		total_supply_uin256, _ := uint256.FromBig(total_supply)
 		total_stake_uin256, _ := uint256.FromBig(total_stake)
-		expected_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256)
+		expected_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256, uint64(block_n))
 		expected_reward := expected_reward_uint256.ToBig()
 
 		reward := test.AdvanceBlock(&validator1_addr, &tmp_rewards_stats)
@@ -1220,7 +1226,7 @@ func TestRewardsAndCommission(t *testing.T) {
 	// Expected block reward
 	var yield_curve dpos.YieldCurve
 	yield_curve.Init(cfg)
-	expected_block_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256)
+	expected_block_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256, uint64(test.BlockNumber()))
 	expected_block_reward := expected_block_reward_uint256.ToBig()
 
 	// Splitting block rewards between votes and blocks

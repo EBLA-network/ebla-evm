@@ -66,13 +66,14 @@ func (api *API) Init(cfg chain_config.ChainConfig) *API {
 
 	var yield_curve YieldCurve
 	yield_curve.Init(cfg)
-	_, yield := yield_curve.CalculateBlockReward(uint256.NewInt(0), total_supply_uin256)
+	// Validate starting yield at block 0 (epoch 0)
+	_, yield := yield_curve.CalculateBlockReward(uint256.NewInt(0), total_supply_uin256, uint64(0))
 
 	decimal_precision := uint256.NewInt(1e4)
-	ideal_yield := new(uint256.Int).Mul(uint256.NewInt(20), decimal_precision) // 20%
+	expected_initial_yield := new(uint256.Int).Mul(uint256.NewInt(7), decimal_precision) // 7%
 
-	if yield.Cmp(ideal_yield) == 1 {
-		fmt.Printf("! Warning: Starting yield is %d %%, which is > ideal yield (20 %%). To make the yield some specific number, adjust either GenesisBalances or Hardforks.AspenHf.MaxSupply as Yield = (MaxSupply - Sum of GenesisBalances) / Sum of GenesisBalances\n", new(uint256.Int).Div(yield, decimal_precision))
+	if yield.Cmp(expected_initial_yield) == 1 {
+		fmt.Printf("! Warning: Starting yield is %d (1e6 precision), > expected 7%%. Check YieldCurve constants.\n", yield)
 	}
 
 	api.config = cfg
