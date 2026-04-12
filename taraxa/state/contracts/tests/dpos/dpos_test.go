@@ -944,9 +944,8 @@ func TestUndelegateMin(t *testing.T) {
 }
 
 func TestYieldCurveAspenHf(t *testing.T) {
-	tc := test_common.NewTestCase(t)
-	cfg := DefaultChainCfg
-	tc.End()
+	tc := tests.NewTestCtx(t)
+	cfg := CopyDefaultChainConfig()
 
 	var yield_curve dpos.YieldCurve
 	yield_curve.Init(cfg)
@@ -1006,7 +1005,8 @@ func calculateExpectedBlockReward(total_stake *uint256.Int, expected_yield *uint
 }
 
 func TestAspenHf(t *testing.T) {
-	// Test if generated block reward changed from fixed yield to the new dynamic yield curve
+	// EBLA: All hardforks active from block 0. This test verifies the dynamic
+	// yield curve (epoch-based decay) produces correct rewards from genesis.
 	cfg := CopyDefaultChainConfig()
 	cfg.Hardforks.AspenHf.BlockNumPartOne = 0
 	cfg.Hardforks.AspenHf.BlockNumPartTwo = 0
@@ -1030,7 +1030,7 @@ func TestAspenHf(t *testing.T) {
 	test.ExecuteAndCheck(validator1_owner, delegator1_stake, test.Pack("registerValidator", validator1_addr, validator1_proof, DefaultVrfKey, validator1_commission, "test", "test"), util.ErrorString(""), util.ErrorString(""))
 	total_stake := delegator1_stake
 
-	// Empty rewards statistics
+	// Rewards statistics
 	trxFee := bigutil.Div(TaraPrecision, big.NewInt(1000)) //  0.001 TARA
 	tmp_rewards_stats := NewRewardsStats(&validator1_addr)
 
@@ -1049,29 +1049,16 @@ func TestAspenHf(t *testing.T) {
 	txsFees := bigutil.Mul(trxFee, txsNum)
 
 	contract_balance := new(big.Int).Set(total_stake)
-	// Advance couple of blocks - pre aspen.PartTwo hf with fixed yield
-	for block_n := test.BlockNumber(); block_n < cfg.Hardforks.AspenHf.BlockNumPartTwo-1; block_n++ {
-		expected_reward := bigutil.Mul(total_stake, big.NewInt(int64(test.Chain_cfg.DPOS.YieldPercentage)))
-		expected_reward = bigutil.Div(expected_reward, bigutil.Mul(big.NewInt(100), big.NewInt(int64(test.Chain_cfg.DPOS.BlocksPerYear))))
 
-		reward := test.AdvanceBlock(&validator1_addr, &tmp_rewards_stats).ToBig()
-		tc.Assert.Equal(expected_reward, reward)
+	// EBLA: No pre-Aspen loop needed. BlockNumPartTwo = 0 means Aspen is active
+	// from genesis. The old pre-Aspen fixed-yield path is dead code on EBLA.
 
-		contract_balance.Add(contract_balance, reward)
-		contract_balance.Add(contract_balance, txsFees)
-		test.CheckContractBalance(contract_balance)
-
-		if block_n >= cfg.Hardforks.AspenHf.BlockNumPartOne-1 {
-			total_supply.Add(total_supply, reward)
-		}
-	}
-
-	// Expected block reward
+	// Initialize yield curve for epoch-based reward calculation
 	var yield_curve dpos.YieldCurve
-	expected_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256, uint64(block_n))
+	yield_curve.Init(cfg)
 
-	// Advance couple of blocks - after aspen.PartTwo hf with dynamic yield
-	for block_n := test.BlockNumber(); block_n < cfg.Hardforks.AspenHf.BlockNumPartTwo+20; block_n++ {
+	// Advance 20 blocks with dynamic yield curve (epoch-based decay)
+	for block_n := test.BlockNumber(); block_n < 20; block_n++ {
 		total_supply_uin256, _ := uint256.FromBig(total_supply)
 		total_stake_uin256, _ := uint256.FromBig(total_stake)
 		expected_reward_uint256, _ := yield_curve.CalculateBlockReward(total_stake_uin256, total_supply_uin256, uint64(block_n))
@@ -1087,8 +1074,7 @@ func TestAspenHf(t *testing.T) {
 		test.CheckContractBalance(contract_balance)
 	}
 
-	// Advance cfg.DPOS.DelegationDelay blocks and do not add rewards to the total_supply to make it equal to the test.GetDPOSReader().GetTotalSupply().
-	// test.GetDPOSReader().GetTotalSupply() returns delayed data by cfg.DPOS.DelegationDelay blocks so after
+	// Advance cfg.DPOS.DelegationDelay blocks so GetTotalSupply() catches up
 	for idx := uint32(0); idx < cfg.DPOS.DelegationDelay; idx++ {
 		test.AdvanceBlock(&validator1_addr, &tmp_rewards_stats)
 	}
