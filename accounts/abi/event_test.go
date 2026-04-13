@@ -25,8 +25,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

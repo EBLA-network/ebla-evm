@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"unsafe"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type BigConv struct {

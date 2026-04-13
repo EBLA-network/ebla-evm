@@ -1,8 +1,8 @@
-#ifndef TARAXA_EVM_STATE_H
-#define TARAXA_EVM_STATE_H
+#ifndef EBLA_EVM_STATE_H
+#define EBLA_EVM_STATE_H
 
 #include <stdint.h>
 
-typedef uint8_t taraxa_evm_state_API_ptr;
+typedef uint8_t ebla_evm_state_API_ptr;
 
 #endif

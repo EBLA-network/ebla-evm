@@ -1,6 +1,6 @@
 package op_stack
 
-import "github.com/Taraxa-project/taraxa-evm/common"
+import "github.com/EBLA-network/ebla-evm/common"
 
 // OP Stack Specification
 var OpPrecompiles = map[common.Address][]byte{

@@ -12,28 +12,28 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/jsonutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/jsonutil"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/tests"
+	"github.com/EBLA-network/ebla-evm/ebla/util/tests"
 
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state"
+	"github.com/EBLA-network/ebla-evm/ebla/state"
 
-	"github.com/Taraxa-project/taraxa-evm/core"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db_rocksdb"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/files"
+	"github.com/EBLA-network/ebla-evm/core"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db_rocksdb"
+	"github.com/EBLA-network/ebla-evm/ebla/util/files"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -46,7 +46,7 @@ func main() {
 		fmt.Println("Stats are also written line-per-record in json file: <output_dir>/<tag>_stats.json")
 	}
 	var output_dir string
-	flag.StringVar(&output_dir, "output_dir", path.Join(os.TempDir(), "taraxa_evm_perftest"), ""+
+	flag.StringVar(&output_dir, "output_dir", path.Join(os.TempDir(), "ebla_evm_perftest"), ""+
 		"Base directory for all output")
 	var num_addrs uint64
 	flag.Uint64Var(&num_addrs, "num_addrs", 10e6, ""+

@@ -3,9 +3,9 @@ package state
 import (
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_evm"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_evm"
 )
 
 func TestStateDBTransientStorage(t *testing.T) {

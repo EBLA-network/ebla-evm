@@ -7,23 +7,23 @@ import (
 
 	"github.com/holiman/uint256"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state"
-	dpos "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/precompiled"
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/rewards_stats"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/ebla/state"
+	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/state/rewards_stats"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db_rocksdb"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db_rocksdb"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/tests"
+	"github.com/EBLA-network/ebla-evm/ebla/util/tests"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
 )
 
 type ContractTest struct {

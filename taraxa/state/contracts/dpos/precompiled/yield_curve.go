@@ -1,9 +1,9 @@
 package dpos
 
 import (
-	chain_config "github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
+	chain_config "github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/holiman/uint256"
 )
 
@@ -116,9 +116,9 @@ func (self *YieldCurve) calculateCurrentYield(block_num uint64) *uint256.Int {
 //
 // Parameters:
 //   - current_total_delegation: total staked across all validators
-//   - current_total_tara_supply: current total supply (unused in new model, kept for interface compat)
+//   - current_total_ebla_supply: current total supply (unused in new model, kept for interface compat)
 //   - block_num: current block number (determines epoch)
-func (self *YieldCurve) CalculateBlockReward(current_total_delegation *uint256.Int, current_total_tara_supply *uint256.Int, block_num uint64) (block_reward *uint256.Int, yield *uint256.Int) {
+func (self *YieldCurve) CalculateBlockReward(current_total_delegation *uint256.Int, current_total_ebla_supply *uint256.Int, block_num uint64) (block_reward *uint256.Int, yield *uint256.Int) {
 	yield = self.calculateCurrentYield(block_num)
 
 	block_reward = new(uint256.Int).Mul(current_total_delegation, yield)

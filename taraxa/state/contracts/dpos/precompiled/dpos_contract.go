@@ -8,24 +8,24 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Taraxa-project/taraxa-evm/crypto"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 	"github.com/holiman/uint256"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 
-	chain_config "github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	dpos_sol "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/solidity"
-	storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/rewards_stats"
+	chain_config "github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	dpos_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/solidity"
+	storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/state/rewards_stats"
 )
 
 // This package implements the main DPOS contract as well as the fee distribution schema
@@ -185,7 +185,7 @@ type Contract struct {
 
 	minted_tokens *uint256.Int
 
-	// Total tara supply = genesis balances + block rewards
+	// Total ebla supply = genesis balances + block rewards
 	total_supply *uint256.Int
 
 	lazy_init_done bool
@@ -491,7 +491,7 @@ func (self *Contract) lazy_init() {
 		return
 	}
 
-	self.Abi, _ = abi.JSON(strings.NewReader(dpos_sol.TaraxaDposClientMetaData))
+	self.Abi, _ = abi.JSON(strings.NewReader(dpos_sol.EblaDposClientMetaData))
 	self.logs = *new(Logs).Init(self.Abi.Events)
 
 	self.validators.Init(&self.storage, field_validators)
@@ -901,7 +901,7 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	blockReward := new(uint256.Int)
 
 	current_block_num := self.evm.GetBlock().Number
-	// Aspen hf introduces dynamic yield curve, see https://github.com/Taraxa-project/TIP/blob/main/TIP-2/TIP-2%20-%20Cap%20TARA's%20Total%20Supply.md
+	// Aspen hf introduces dynamic yield curve, see https://github.com/EBLA-network/TIP/blob/main/TIP-2/TIP-2%20-%20Cap%20EBLA's%20Total%20Supply.md
 	if self.cfg.Hardforks.IsOnAspenHardforkPartTwo(current_block_num) {
 		blockReward = self.processBlockReward(current_block_num)
 	} else {

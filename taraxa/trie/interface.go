@@ -1,6 +1,6 @@
 package trie
 
-import "github.com/Taraxa-project/taraxa-evm/common"
+import "github.com/EBLA-network/ebla-evm/common"
 
 type Schema interface {
 	ValueStorageToHashEncoding(enc_storage []byte) (enc_hash []byte)

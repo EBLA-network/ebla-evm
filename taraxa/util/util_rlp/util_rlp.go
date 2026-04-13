@@ -1,7 +1,7 @@
 package util_rlp
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 func RLPListAt(list []byte, pos uint) (ret []byte) {

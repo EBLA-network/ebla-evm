@@ -3,16 +3,16 @@ package state_dry_runner
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	dpos "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/precompiled"
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_evm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_evm"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 )
 
 type DryRunner struct {

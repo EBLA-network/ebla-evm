@@ -1,9 +1,9 @@
 package state_db
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/trie"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/trie"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 )
 
 type ExtendedReader struct{ Reader }

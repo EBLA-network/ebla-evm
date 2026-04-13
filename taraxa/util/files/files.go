@@ -5,7 +5,7 @@ import (
 	"path"
 	"runtime"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 	cpy "github.com/otiai10/copy"
 )
 

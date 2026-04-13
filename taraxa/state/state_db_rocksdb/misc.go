@@ -5,8 +5,8 @@ import (
 	"unsafe"
 
 	"github.com/linxGnu/grocksdb"
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
 )
 
 type VersionedKey [common.HashLength + unsafe.Sizeof(types.BlockNum(0))]byte

@@ -1,4 +1,4 @@
-# go-taraxa-abi
+# go-ebla-abi
 Read tutorial inside dpos_contract_solidity_structs.go file
 
 #### Prerequisites
@@ -22,7 +22,7 @@ solc --abi --overwrite --optimize dpos_contract_interface.sol --output-dir .
 #### Create SC go class
 run
 ```
-abigen --abi=DposInterface.abi --pkg=taraxaDposClient --out=dpos_contract_interface.go
+abigen --abi=DposInterface.abi --pkg=eblaDposClient --out=dpos_contract_interface.go
 ```
 
 #### Create implementation bytecode 
@@ -31,4 +31,4 @@ run
 ```
 solc --bin-runtime --overwrite --optimize dpos_contract_impl.sol --output-dir .
 ```
-Copy bytecode from `DposDummyImpl.bin-runtime` file to `var TaraxaDposImplBytecode` variable in `dpos_contract_solidity_structs.go` file. 
+Copy bytecode from `DposDummyImpl.bin-runtime` file to `var EblaDposImplBytecode` variable in `dpos_contract_solidity_structs.go` file. 

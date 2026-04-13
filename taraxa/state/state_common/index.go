@@ -1,10 +1,10 @@
 package state_common
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/consensus/ethash"
-	"github.com/Taraxa-project/taraxa-evm/crypto"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/consensus/ethash"
+	"github.com/EBLA-network/ebla-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 type UncleBlock = ethash.BlockNumAndCoinbase

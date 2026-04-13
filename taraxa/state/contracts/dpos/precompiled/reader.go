@@ -3,18 +3,18 @@ package dpos
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/holiman/uint256"
 
-	chain_config "github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	slashing "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/slashing/precompiled"
-	storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
+	chain_config "github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	slashing "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/precompiled"
+	storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
 
-	"github.com/Taraxa-project/taraxa-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/types"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 )
 
 type Reader struct {

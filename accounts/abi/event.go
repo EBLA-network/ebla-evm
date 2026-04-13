@@ -21,9 +21,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event

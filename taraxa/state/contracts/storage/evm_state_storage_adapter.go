@@ -3,10 +3,10 @@ package contract_storage
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_evm"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_evm"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type EVMStateStorage struct{ state_evm.EVMStateFace }

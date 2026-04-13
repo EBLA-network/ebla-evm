@@ -3,9 +3,9 @@ package dpos
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 )
 
 func checkError(log *vm.LogRecord, err error) *vm.LogRecord {

@@ -19,9 +19,9 @@ package ethash
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 )
 
 var (

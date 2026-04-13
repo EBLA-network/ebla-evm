@@ -6,11 +6,11 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 
-	"github.com/Taraxa-project/taraxa-evm/core"
+	"github.com/EBLA-network/ebla-evm/core"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 )
 
 //export go_set_gc_percent
@@ -28,18 +28,18 @@ func go_gc_async() {
 	go runtime.GC()
 }
 
-//export taraxa_evm_keccak256_init_pool
-func taraxa_evm_keccak256_init_pool(size C.uint64_t) {
+//export ebla_evm_keccak256_init_pool
+func ebla_evm_keccak256_init_pool(size C.uint64_t) {
 	keccak256.InitPool(uint64(size))
 }
 
-//export taraxa_evm_mainnet_initial_balances
-func taraxa_evm_mainnet_initial_balances() C.taraxa_evm_Bytes {
+//export ebla_evm_mainnet_initial_balances
+func ebla_evm_mainnet_initial_balances() C.ebla_evm_Bytes {
 	return go_bytes_to_c(bin.BytesView(core.MainnetAllocData))
 }
 
-//export taraxa_evm_traceback
-func taraxa_evm_traceback(cb C.taraxa_evm_BytesCallback) {
+//export ebla_evm_traceback
+func ebla_evm_traceback(cb C.ebla_evm_BytesCallback) {
 	call_bytes_cb(debug.Stack(), cb)
 }
 

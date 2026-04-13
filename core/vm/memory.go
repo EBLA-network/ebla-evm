@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 	"github.com/holiman/uint256"
 )
 

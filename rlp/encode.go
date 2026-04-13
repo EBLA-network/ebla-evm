@@ -24,10 +24,10 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 )
 
 const EmptyString = 0x80

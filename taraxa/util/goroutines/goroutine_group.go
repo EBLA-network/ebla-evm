@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 )
 
 type GoroutineGroup struct {

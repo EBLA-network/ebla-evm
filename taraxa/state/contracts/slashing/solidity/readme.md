@@ -1,4 +1,4 @@
-# go-taraxa-abi
+# go-ebla-abi
 Read tutorial inside slashing_contract_solidity_structs.go file
 
 #### Prerequisites
@@ -22,5 +22,5 @@ solc --abi --overwrite --optimize slashing_contract_interface.sol --output-dir .
 #### Create SC go class
 run
 ```
-abigen --abi=SlashingInterface.abi --pkg=taraxaSlashingClient --out=slashing_contract_interface.go
+abigen --abi=SlashingInterface.abi --pkg=eblaSlashingClient --out=slashing_contract_interface.go
 ```

@@ -3,16 +3,16 @@ package dpos
 import (
 	"math/big"
 
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 // Pre cornus hardfork - without undelegation Id
 type UndelegationV1 struct {
-	// Amount of TARA that accound should be able to get
+	// Amount of EBLA that accound should be able to get
 	Amount *big.Int
 
 	// Block number when the withdrawal be ready

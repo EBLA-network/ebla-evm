@@ -4,19 +4,19 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/tests"
+	"github.com/EBLA-network/ebla-evm/ebla/util/tests"
 
 	"github.com/schollz/progressbar/v3"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db_rocksdb"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db_rocksdb"
 
-	"github.com/Taraxa-project/taraxa-evm/core"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/params"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/data"
+	"github.com/EBLA-network/ebla-evm/core"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/params"
+	"github.com/EBLA-network/ebla-evm/ebla/data"
 )
 
 func TestEthMainnetSmoke(t *testing.T) {

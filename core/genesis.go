@@ -21,10 +21,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Taraxa-project/taraxa-evm/rlp"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type BalanceMap = map[common.Address]*big.Int

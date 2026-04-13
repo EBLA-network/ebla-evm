@@ -1,6 +1,6 @@
 package trie
 
-import "github.com/Taraxa-project/taraxa-evm/common"
+import "github.com/EBLA-network/ebla-evm/common"
 
 const MaxDepth = common.HashLength * 2
 const HexKeyLen = MaxDepth + 1

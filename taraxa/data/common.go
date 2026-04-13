@@ -3,9 +3,9 @@ package data
 import (
 	"os"
 
-	"github.com/Taraxa-project/taraxa-evm/rlp"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/files"
+	"github.com/EBLA-network/ebla-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/files"
 )
 
 var this_dir = files.ThisDirRelPath()

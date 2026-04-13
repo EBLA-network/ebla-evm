@@ -6,19 +6,19 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Taraxa-project/taraxa-evm/crypto"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	slashing_sol "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/slashing/solidity"
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	slashing_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/solidity"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 	"golang.org/x/exp/slices"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 )
 
 // This package implements the main SLASHING contract
@@ -119,7 +119,7 @@ func (c *Contract) Init(cfg chain_config.ChainConfig, storage contract_storage.S
 	c.cfg = cfg
 	c.storage.Init(slashing_contract_address, storage)
 	c.delayedReader = read_storage
-	c.Abi, _ = abi.JSON(strings.NewReader(slashing_sol.TaraxaSlashingClientMetaData))
+	c.Abi, _ = abi.JSON(strings.NewReader(slashing_sol.EblaSlashingClientMetaData))
 	c.logs = *new(Logs).Init(c.Abi.Events)
 	c.evm = evm
 	return c

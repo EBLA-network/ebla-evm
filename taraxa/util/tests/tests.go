@@ -6,15 +6,15 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/files"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/files"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 )
 
 type TestCtx struct {

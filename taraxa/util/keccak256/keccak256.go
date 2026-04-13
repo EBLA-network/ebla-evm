@@ -7,10 +7,10 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 	"golang.org/x/crypto/sha3"
 )
 

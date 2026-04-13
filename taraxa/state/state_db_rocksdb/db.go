@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/goroutines"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/goroutines"
 	"github.com/linxGnu/grocksdb"
 )
 

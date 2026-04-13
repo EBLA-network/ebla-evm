@@ -3,12 +3,12 @@ package state_evm
 import (
 	"unsafe"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 )
 
 type EVMStateFace interface {

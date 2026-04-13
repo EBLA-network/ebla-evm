@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Taraxa-project/taraxa-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/crypto"
 )
 
 // Method represents a callable given a `Name` and whether the method is a constant.

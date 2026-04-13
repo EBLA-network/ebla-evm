@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Taraxa-project/taraxa-evm/common/hexutil"
+	"github.com/EBLA-network/ebla-evm/common/hexutil"
 )
 
 type MyType [5]byte

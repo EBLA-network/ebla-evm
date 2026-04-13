@@ -19,7 +19,7 @@
 package crypto
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/crypto/secp256k1"
+	"github.com/EBLA-network/ebla-evm/crypto/secp256k1"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.

@@ -1,4 +1,4 @@
-// (c) 2022-2023, Taraxa, Inc. All rights reserved.
+// (c) 2022-2023, Ebla, Inc. All rights reserved.
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.8.0;

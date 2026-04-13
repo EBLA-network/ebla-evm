@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 )
 
 func TestMap(t *testing.T) {

@@ -1,7 +1,7 @@
 package trie
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 type commit_context struct {

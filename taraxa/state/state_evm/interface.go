@@ -3,11 +3,11 @@ package state_evm
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type AccountChange struct {

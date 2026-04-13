@@ -16,22 +16,22 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/files"
+	"github.com/EBLA-network/ebla-evm/ebla/util/files"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state"
+	"github.com/EBLA-network/ebla-evm/ebla/state"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db_rocksdb"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db_rocksdb"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/common/hexutil"
-	"github.com/Taraxa-project/taraxa-evm/core"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/params"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/common/hexutil"
+	"github.com/EBLA-network/ebla-evm/core"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/params"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 	"github.com/linxGnu/grocksdb"
 )
 
@@ -42,7 +42,7 @@ func main() {
 
 	usr_dir, e1 := os.UserHomeDir()
 	util.PanicIfNotNil(e1)
-	dest_data_dir := files.CreateDirectories(usr_dir, "taraxa_evm_test")
+	dest_data_dir := files.CreateDirectories(usr_dir, "ebla_evm_test")
 
 	profile_basedir := files.CreateDirectories(dest_data_dir, "profiles")
 	new_prof_file := func(time time.Time, kind string) *os.File {

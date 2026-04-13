@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	dpos "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/precompiled"
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_evm"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_evm"
 )
 
 type TraceRunner struct {

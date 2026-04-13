@@ -3,16 +3,16 @@ package state_transition
 import (
 	"runtime"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_common"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_common"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigconv"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigconv"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_db"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_evm"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/trie"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/goroutines"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_evm"
+	"github.com/EBLA-network/ebla-evm/ebla/trie"
+	"github.com/EBLA-network/ebla-evm/ebla/util/goroutines"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 )
 
 type TrieSink struct {

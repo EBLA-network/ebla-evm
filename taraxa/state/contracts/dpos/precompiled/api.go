@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	chain_config "github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	slashing "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/slashing/precompiled"
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/common"
+	chain_config "github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	slashing "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/precompiled"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 	"github.com/holiman/uint256"
 
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/core/vm"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/core/vm"
 )
 
 type DposConfigWithBlock struct {

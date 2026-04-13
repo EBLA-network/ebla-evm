@@ -17,7 +17,7 @@
 package vm
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/common/math"
+	"github.com/EBLA-network/ebla-evm/common/math"
 	"github.com/holiman/uint256"
 )
 

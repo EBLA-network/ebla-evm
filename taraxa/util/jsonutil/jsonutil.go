@@ -3,7 +3,7 @@ package jsonutil
 import (
 	"encoding/json"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 )
 
 func MustEncode(obj interface{}) []byte {

@@ -1,4 +1,4 @@
-module github.com/Taraxa-project/taraxa-evm
+module github.com/EBLA-network/ebla-evm
 
 go 1.22
 

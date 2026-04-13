@@ -26,7 +26,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/stretchr/testify/require"
 )
 

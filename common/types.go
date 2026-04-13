@@ -25,9 +25,9 @@ import (
 	"math/rand"
 	"reflect"
 
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/rlp"
 
-	"github.com/Taraxa-project/taraxa-evm/common/hexutil"
+	"github.com/EBLA-network/ebla-evm/common/hexutil"
 	"golang.org/x/crypto/sha3"
 )
 

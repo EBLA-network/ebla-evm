@@ -17,7 +17,7 @@
 package state_db
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type Storage map[common.Hash]common.Hash

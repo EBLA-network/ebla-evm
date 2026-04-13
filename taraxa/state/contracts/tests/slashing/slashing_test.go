@@ -8,18 +8,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/accounts/abi"
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/crypto/secp256k1"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/chain_config"
-	slashing "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/slashing/precompiled"
-	slashing_sol "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/slashing/solidity"
-	test_utils "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/tests"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/tests"
+	"github.com/EBLA-network/ebla-evm/accounts/abi"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/crypto/secp256k1"
+	"github.com/EBLA-network/ebla-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
+	slashing "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/precompiled"
+	slashing_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/solidity"
+	test_utils "github.com/EBLA-network/ebla-evm/ebla/state/contracts/tests"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/ebla/util/tests"
 )
 
 // This strings should correspond to event signatures in ../solidity/slashing_contract_interface.sol file
@@ -66,7 +66,7 @@ var (
 			AspenHf: chain_config.AspenHfConfig{
 				BlockNumPartOne: 0,
 				BlockNumPartTwo: 0,
-				// Max token supply is 12 Billion TARA -> 12e+9(12 billion) * 1e+18(tara precision)
+				// Max token supply is 12 Billion EBLA -> 12e+9(12 billion) * 1e+18(ebla precision)
 				MaxSupply:        new(big.Int).Mul(big.NewInt(12e+9), big.NewInt(1e+18)),
 				GeneratedRewards: big.NewInt(0),
 			},
@@ -126,7 +126,7 @@ func GetVoteRlp(vote *slashing.Vote) []byte {
 }
 
 func TestDoubleVotingSameVotesHashes(t *testing.T) {
-	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, DefaultChainCfg)
+	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, DefaultChainCfg)
 	defer test.End()
 
 	_, privkey := generateKeyPair()
@@ -147,7 +147,7 @@ func TestDoubleVotingSameVotesHashes(t *testing.T) {
 func TestDoubleVotingExistingProof(t *testing.T) {
 	cfg := DefaultChainCfg
 	privkey, _ := addValidator(&cfg)
-	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, cfg)
+	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
 
 	vote_a := DefaultVote
@@ -169,7 +169,7 @@ func TestDoubleVotingExistingProof(t *testing.T) {
 func TestDoubleVotingInvalidSig(t *testing.T) {
 	cfg := DefaultChainCfg
 	privkey, _ := addValidator(&cfg)
-	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, cfg)
+	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
 
 	vote_a := DefaultVote
@@ -198,7 +198,7 @@ func TestDoubleVotingInvalidSig(t *testing.T) {
 }
 
 func TestDoubleVotingInvalidPeriodRoundStep(t *testing.T) {
-	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, DefaultChainCfg)
+	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, DefaultChainCfg)
 	defer test.End()
 
 	_, privkey := generateKeyPair()
@@ -235,7 +235,7 @@ func TestDoubleVotingInvalidPeriodRoundStep(t *testing.T) {
 }
 
 func TestDoubleVotingInvalidBlockHash(t *testing.T) {
-	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, DefaultChainCfg)
+	_, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, DefaultChainCfg)
 	defer test.End()
 
 	_, privkey := generateKeyPair()
@@ -280,7 +280,7 @@ func TestDoubleVotingInvalidBlockHash(t *testing.T) {
 func TestGetJailBlock(t *testing.T) {
 	cfg := DefaultChainCfg
 	privkey1, malicious_vote_author1 := addValidator(&cfg)
-	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, cfg)
+	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
 
 	proof_author := addr(1)
@@ -329,7 +329,7 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 	tc := tests.NewTestCtx(t)
 	block := uint64(123)
 
-	Abi, _ := abi.JSON(strings.NewReader(slashing_sol.TaraxaSlashingClientMetaData))
+	Abi, _ := abi.JSON(strings.NewReader(slashing_sol.EblaSlashingClientMetaData))
 	logs := *new(slashing.Logs).Init(Abi.Events)
 
 	count := 0
@@ -370,7 +370,7 @@ func TestJailedValidatorsList(t *testing.T) {
 		proofs[i].VoteB = voteB
 	}
 
-	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, cfg)
+	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
 
 	for _, proof := range proofs {
@@ -435,7 +435,7 @@ func TestDoubleJailing(t *testing.T) {
 	cfg := DefaultChainCfg
 	cfg.Hardforks.MagnoliaHf.JailTime = 50
 	privkey1, _ := addValidator(&cfg)
-	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.TaraxaSlashingClientMetaData, t, cfg)
+	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
 
 	proof_author := addr(1)

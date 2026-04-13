@@ -1,9 +1,9 @@
 package state_transition
 
 import (
-	dpos "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/precompiled"
-	dpos_sol "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/dpos/solidity"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_transition/op_stack"
+	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
+	dpos_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/solidity"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_transition/op_stack"
 )
 
 func (st *StateTransition) applyHFChanges() {

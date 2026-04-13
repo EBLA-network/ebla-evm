@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math/big"
 
-	contract_storage "github.com/Taraxa-project/taraxa-evm/taraxa/state/contracts/storage"
+	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 // Pre-hardfork validator struct without UndelegationsCount member

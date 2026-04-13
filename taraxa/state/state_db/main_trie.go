@@ -4,19 +4,19 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bigutil"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/bin"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
+	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/state/state_common"
+	"github.com/EBLA-network/ebla-evm/ebla/state/state_common"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/util_rlp"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/ebla/util/util_rlp"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/crypto"
-	"github.com/Taraxa-project/taraxa-evm/rlp"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 type MainTrieSchema struct{}

@@ -3,7 +3,7 @@ package rewards_stats
 import (
 	"math/big"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type ValidatorStats struct {

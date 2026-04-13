@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/common/math"
-	"github.com/Taraxa-project/taraxa-evm/crypto"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/common/math"
+	"github.com/EBLA-network/ebla-evm/crypto"
 	"github.com/holiman/uint256"
 )
 

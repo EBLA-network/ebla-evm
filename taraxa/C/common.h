@@ -1,5 +1,5 @@
-#ifndef TARAXA_EVM_COMMON_H
-#define TARAXA_EVM_COMMON_H
+#ifndef EBLA_EVM_COMMON_H
+#define EBLA_EVM_COMMON_H
 
 #include <stdint.h>
 
@@ -12,11 +12,11 @@
     } name; \
     inline out_t name##Apply(name fn, in_t arg) { return fn.Apply(fn.Receiver, arg); } \
 
-SLICE(taraxa_evm_Bytes, uint8_t);
-ARRAY(taraxa_evm_Hash, uint8_t, 32);
-ARRAY(taraxa_evm_Addr, uint8_t, 20);
-FUNCTION(taraxa_evm_BytesCallback, taraxa_evm_Bytes, void)
-FUNCTION(taraxa_evm_GetBlockHash, uint64_t, taraxa_evm_Hash)
+SLICE(ebla_evm_Bytes, uint8_t);
+ARRAY(ebla_evm_Hash, uint8_t, 32);
+ARRAY(ebla_evm_Addr, uint8_t, 20);
+FUNCTION(ebla_evm_BytesCallback, ebla_evm_Bytes, void)
+FUNCTION(ebla_evm_GetBlockHash, uint64_t, ebla_evm_Hash)
 
 #undef SLICE
 #undef ARRAY

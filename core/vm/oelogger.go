@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/common/hexutil"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/common/hexutil"
 )
 
 const (

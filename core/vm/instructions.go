@@ -19,8 +19,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 	"github.com/holiman/uint256"
 )
 

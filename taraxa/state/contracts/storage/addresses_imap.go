@@ -1,7 +1,7 @@
 package contract_storage
 
 import (
-	"github.com/Taraxa-project/taraxa-evm/common"
+	"github.com/EBLA-network/ebla-evm/common"
 )
 
 type AddressesIMapReader struct {

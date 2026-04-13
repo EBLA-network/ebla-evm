@@ -20,7 +20,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util"
+	"github.com/EBLA-network/ebla-evm/ebla/util"
 )
 
 // RawValue represents an encoded RLP value and can be used to delay

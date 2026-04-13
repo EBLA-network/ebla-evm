@@ -23,10 +23,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/common/hexutil"
-	"github.com/Taraxa-project/taraxa-evm/common/math"
-	"github.com/Taraxa-project/taraxa-evm/core/types"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/common/hexutil"
+	"github.com/EBLA-network/ebla-evm/common/math"
+	"github.com/EBLA-network/ebla-evm/core/types"
 	"github.com/holiman/uint256"
 )
 

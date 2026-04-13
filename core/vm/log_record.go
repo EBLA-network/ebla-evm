@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/Taraxa-project/taraxa-evm/common"
+import "github.com/EBLA-network/ebla-evm/common"
 
 type LogRecord struct {
 	Address common.Address

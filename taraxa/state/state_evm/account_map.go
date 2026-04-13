@@ -3,8 +3,8 @@ package state_evm
 import (
 	"math"
 
-	"github.com/Taraxa-project/taraxa-evm/common"
-	"github.com/Taraxa-project/taraxa-evm/taraxa/util/asserts"
+	"github.com/EBLA-network/ebla-evm/common"
+	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 )
 
 type AccountMap struct {
