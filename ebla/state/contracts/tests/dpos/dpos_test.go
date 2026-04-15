@@ -112,6 +112,8 @@ var (
 			DelegationLockingPeriod:     4,
 			BlocksPerYear:               6709787, // 31536000000 / 4700 (EBLA: lambda=2000, block=4.7s)
 			YieldPercentage:             7,
+			TrxMinGasPrice:              1000000000,
+			TrxMaxGasLimit:              1,
 		},
 		Hardforks: chain_config.HardforksConfig{
 			FixRedelegateBlockNum: 0,
@@ -131,11 +133,6 @@ var (
 				DelegationLockingPeriod: 4,
 				DagGasLimit:             100000,
 				PbftGasLimit:            1000000,
-			},
-			SoleiroliaHf: chain_config.SoleiroliaHfConfig{
-				BlockNum:       0,
-				TrxMinGasPrice: 1000000000,
-				TrxMaxGasLimit: 1,
 			},
 			InactivityPenaltyBlock: 0,
 		},

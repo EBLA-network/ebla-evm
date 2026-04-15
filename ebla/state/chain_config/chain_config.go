@@ -41,11 +41,6 @@ type CornusHfConfig struct {
 	PbftGasLimit            uint64
 }
 
-type SoleiroliaHfConfig struct {
-	BlockNum       uint64
-	TrxMinGasPrice uint64 // [wei]
-	TrxMaxGasLimit uint64
-}
 
 // Leaving it here for next HF
 // type BambooRedelegation struct {
@@ -67,7 +62,6 @@ type HardforksConfig struct {
 	AspenHf                      AspenHfConfig
 	FicusHf                      FicusHfConfig
 	CornusHf                     CornusHfConfig
-	SoleiroliaHf                 SoleiroliaHfConfig
 	InactivityPenaltyBlock uint64  // Block at which inactivity penalty activates (0 for EBLA genesis)
 }
 
@@ -143,6 +137,8 @@ type DPOSConfig = struct {
 	DelegationLockingPeriod     uint32 // [number of blocks]
 	BlocksPerYear               uint32 // [count]
 	YieldPercentage             uint16 // [%]
+	TrxMinGasPrice              uint64 // [wei] 1 Gwei minimum
+	TrxMaxGasLimit              uint64 // max gas per transaction
 	InitialValidators           []GenesisValidator
 }
 
