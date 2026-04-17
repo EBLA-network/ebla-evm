@@ -258,37 +258,21 @@ func (self *Contract) RequiredGas(ctx vm.CallFrame, evm *vm.EVM) uint64 {
 			return 0
 		}
 	}
-	if self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-		if ctx.Value.Sign() > 0 {
-			if !isPayableMethod(method.Name) {
-				return 0
-			}
+	if ctx.Value.Sign() > 0 {
+		if !isPayableMethod(method.Name) {
+			return 0
 		}
 	}
 
 	switch method.Name {
 	case "delegate":
 		return DelegateGas
+	// New EBLA
 	case "undelegate":
-		return UndelegateGas
-	case "undelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return 0
-		}
 		return UndelegateGas
 	case "confirmUndelegate":
 		return ConfirmUndelegateGas
-	case "confirmUndelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return 0
-		}
-		return ConfirmUndelegateGas
 	case "cancelUndelegate":
-		return CancelUndelegateGas
-	case "cancelUndelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return 0
-		}
 		return CancelUndelegateGas
 	case "reDelegate":
 		return ReDelegateGas
@@ -389,52 +373,30 @@ func (self *Contract) RequiredGas(ctx vm.CallFrame, evm *vm.EVM) uint64 {
 			return 0
 		}
 
-		undelegations_count := self.batch_items_count(uint64(self.undelegations.GetUndelegationsV1Count(&args.Delegator)), uint64(args.Batch), GetUndelegationsMaxCount)
-		return undelegations_count * DposBatchGetMethodsGas
-
-	case "getUndelegationsV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return 0
-		}
-
-		// First 4 bytes is method signature !!!!
-		input := ctx.Input[4:]
-		var args dpos_sol.GetUndelegationsV2Args
-		if err := method.Inputs.Unpack(&args, input); err != nil {
-			// args parsing will fail also during Run() so the tx wont get executed
-			return 0
-		}
-
-		storage_reads_count := self.getUndelegationsV2StorageReadsCount(args, GetUndelegationsMaxCount)
+		storage_reads_count := self.getUndelegationsStorageReadsCount(args, GetUndelegationsMaxCount)
 		return storage_reads_count * DposBatchGetMethodsGas
-
-	case "getUndelegationV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return 0
-		}
-
+	case "getUndelegation":
 		return DposGetMethodsGas
-
 	default:
 	}
 
 	return DefaultDposMethodGas
 }
 
-func (self *Contract) getUndelegationsV2StorageReadsCount(args dpos_sol.GetUndelegationsV2Args, max_batch_items_count uint64) uint64 {
+func (self *Contract) getUndelegationsStorageReadsCount(args dpos_sol.GetUndelegationsArgs, max_batch_items_count uint64) uint64 {
 	to_skip_count := uint64(args.Batch) * max_batch_items_count
 	storage_reads_count := uint64(0)
 	processed_undelegations := uint64(0)
 
 	// Note: we always need to iterate over validators from idx == 0 as it is not known how many undelegations there is for each validator...
 	for validator_idx := uint32(0); ; validator_idx++ {
-		validator, _ := self.undelegations.GetUndelegationsV2Validator(&args.Delegator, validator_idx)
+		validator, _ := self.undelegations.GetUndelegationsValidator(&args.Delegator, validator_idx)
 		if validator == nil {
 			return storage_reads_count
 		}
 		storage_reads_count++
 
-		_, undelegations_ids_map := self.undelegations.GetUndelegationsV2Maps(&args.Delegator, validator)
+		_, undelegations_ids_map := self.undelegations.GetUndelegationsMaps(&args.Delegator, validator)
 
 		undelegations_ids_count := uint64(undelegations_ids_map.GetCount())
 		storage_reads_count++
@@ -618,13 +580,13 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		}
 	}
 
-	if self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-		if ctx.Value.Sign() > 0 {
-			if !isPayableMethod(method.Name) {
-				return nil, ErrNonPayableMethod
-			}
+
+	if ctx.Value.Sign() > 0 {
+		if !isPayableMethod(method.Name) {
+			return nil, ErrNonPayableMethod
 		}
 	}
+
 
 	// First 4 bytes is method signature !!!!
 	input := ctx.Input[4:]
@@ -637,22 +599,8 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 			return nil, err
 		}
 		return nil, self.delegate(ctx, block_num, args)
-
+// new EBLA
 	case "undelegate":
-		var args dpos_sol.UndelegateArgs
-		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse undelegate input args: ", err)
-			return nil, err
-		}
-
-		_, err = self.undelegate(ctx, block_num, args, false)
-		return nil, err
-
-	case "undelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return nil, ErrMethodNotSupported
-		}
-
 		var args dpos_sol.UndelegateArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
 			fmt.Println("Unable to parse undelegateV2 input args: ", err)
@@ -667,46 +615,21 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		return method.Outputs.Pack(undelegation_id)
 
 	case "confirmUndelegate":
-		var args dpos_sol.ValidatorAddressArgs
+		var args dpos_sol.ConfirmUndelegateArgs      // renamed from ConfirmUndelegateV2Args
 		if err = method.Inputs.Unpack(&args, input); err != nil {
 			fmt.Println("Unable to parse confirmUndelegate input args: ", err)
 			return nil, err
 		}
-		return nil, self.confirmUndelegate(ctx, block_num, args.Validator, nil)
-
-	case "confirmUndelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return nil, ErrMethodNotSupported
-		}
-
-		var args dpos_sol.ConfirmUndelegateV2Args
-		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse confirmUndelegateV2 input args: ", err)
-			return nil, err
-		}
-		return nil, self.confirmUndelegate(ctx, block_num, args.Validator, &args.UndelegationId)
+		return nil, self.confirmUndelegate(ctx, block_num, args.Validator, args.UndelegationId)
 
 	case "cancelUndelegate":
-		var args dpos_sol.ValidatorAddressArgs
+		var args dpos_sol.CancelUndelegateArgs     // renamed from CancelUndelegateV2Args
 		if err = method.Inputs.Unpack(&args, input); err != nil {
 			fmt.Println("Unable to parse cancelUndelegate input args: ", err)
 			return nil, err
 		}
 
-		return nil, self.cancelUndelegate(ctx, block_num, args.Validator, nil)
-
-	case "cancelUndelegateV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return nil, ErrMethodNotSupported
-		}
-
-		var args dpos_sol.CancelUndelegateV2Args
-		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse cancelUndelegateV2 input args: ", err)
-			return nil, err
-		}
-
-		return nil, self.cancelUndelegate(ctx, block_num, args.Validator, &args.UndelegationId)
+		return nil, self.cancelUndelegate(ctx, block_num, args.Validator, args.UndelegationId)
 
 	case "reDelegate":
 		var args dpos_sol.RedelegateArgs
@@ -843,34 +766,16 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		}
 		return method.Outputs.Pack(self.getUndelegations(args))
 
-	case "getUndelegationsV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return nil, ErrMethodNotSupported
-		}
-
-		var args dpos_sol.GetUndelegationsV2Args
+	case "getUndelegation":
+		var args dpos_sol.GetUndelegationArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse getUndelegationsV2 input args: ", err)
+			fmt.Println("Unable to parse getUndelegation input args: ", err)
 			return nil, err
 		}
-		return method.Outputs.Pack(self.getUndelegationsV2(args))
-
-	case "getUndelegationV2":
-		if !self.cfg.Hardforks.IsOnCornusHardfork(evm.GetBlock().Number) {
-			return nil, ErrMethodNotSupported
-		}
-
-		var args dpos_sol.GetUndelegationV2Args
-		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse getUndelegationV2 input args: ", err)
-			return nil, err
-		}
-
-		undelegation := self.getUndelegationV2(args.Delegator, args.Validator, args.UndelegationId)
+		undelegation := self.getUndelegation(args.Delegator, args.Validator, args.UndelegationId)
 		if undelegation == nil {
 			return nil, ErrNonExistentUndelegation
 		}
-
 		return method.Outputs.Pack(*undelegation)
 
 	default:
@@ -1255,10 +1160,7 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 // Removes delegation from specified validator and claims rewards
 // new undelegation object is created and moved to queue where after expiration can be claimed
 // Return undelegation_id and error value
-func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dpos_sol.UndelegateArgs, v2 bool) (*uint64, error) {
-	if !v2 && self.undelegations.UndelegationV1Exists(ctx.CallerAccount.Address(), &args.Validator) {
-		return nil, ErrExistentUndelegation
-	}
+func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dpos_sol.UndelegateArgs) (*uint64, error) {
 
 	validator := self.validators.GetValidator(&args.Validator)
 	if validator == nil {
@@ -1337,32 +1239,23 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 	}
 
-	delegationLockingPeriod := uint64(self.cfg.Hardforks.CornusHf.DelegationLockingPeriod)
-	if !self.cfg.Hardforks.IsOnCornusHardfork(block) {
-		delegationLockingPeriod = uint64(self.cfg.DPOS.DelegationLockingPeriod)
-	}
+	delegationLockingPeriod := uint64(self.cfg.DPOS.DelegationLockingPeriod)
 
-	// Create undelegation request
-	undelegation_id := uint64(0)
-	if v2 {
-		undelegation_id = self.undelegations.CreateUndelegationV2(ctx.CallerAccount.Address(), &args.Validator, block+delegationLockingPeriod, args.Amount)
-		self.evm.AddLog(self.logs.MakeUndelegatedV2Log(ctx.CallerAccount.Address(), &args.Validator, undelegation_id, args.Amount))
-	} else {
-		self.undelegations.CreateUndelegationV1(ctx.CallerAccount.Address(), &args.Validator, block+delegationLockingPeriod, args.Amount)
-		self.evm.AddLog(self.logs.MakeUndelegatedV1Log(ctx.CallerAccount.Address(), &args.Validator, args.Amount))
-	}
+	// New EBLA - Create undelegation request
+	undelegation_id := self.undelegations.CreateUndelegation(ctx.CallerAccount.Address(), &args.Validator, block+delegationLockingPeriod, args.Amount)
+	self.evm.AddLog(self.logs.MakeUndelegatedLog(ctx.CallerAccount.Address(), &args.Validator, undelegation_id, args.Amount))
 
 	return &undelegation_id, nil
 }
 
-// Removes undelegation from queue and moves staked tokens back to delegator
+// New EBLA - Removes undelegation from queue and moves staked tokens back to delegator
 // This only works after lock-up period expires
-func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, validator_addr common.Address, undelegation_id *uint64) error {
+func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, validator_addr common.Address, undelegation_id uint64) error {
 	if !self.undelegations.UndelegationExists(ctx.CallerAccount.Address(), &validator_addr, undelegation_id) {
 		return ErrNonExistentUndelegation
 	}
 
-	undelegation := self.undelegations.GetUndelegationBaseObject(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
+	undelegation := self.undelegations.GetUndelegation(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
 	if undelegation.Block > block {
 		return ErrLockedUndelegation
 	}
@@ -1398,8 +1291,8 @@ func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, 
 	return nil
 }
 
-// Removes the undelegation request from queue and returns delegation value back to validator if possible
-func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, validator_addr common.Address, undelegation_id *uint64) error {
+// New EBLA - Removes the undelegation request from queue and returns delegation value back to validator if possible
+func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, validator_addr common.Address, undelegation_id uint64) error {
 	if !self.undelegations.UndelegationExists(ctx.CallerAccount.Address(), &validator_addr, undelegation_id) {
 		return ErrNonExistentUndelegation
 	}
@@ -1412,7 +1305,7 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 	factor := self.getVotingPowerFactor(&validator_addr)
 	prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
-	undelegation := self.undelegations.GetUndelegationBaseObject(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
+	undelegation := self.undelegations.GetUndelegation(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
 	self.undelegations.RemoveUndelegation(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
 
 	state, state_k := self.state_get(validator_addr[:], BlockToBytes(block))
@@ -2045,40 +1938,19 @@ func (self *Contract) getDelegations(args dpos_sol.GetDelegationsArgs) (delegati
 	return
 }
 
-// Returns batch of undelegation from queue for given address
+// New EBLA - Returns batch of undelegation from queue for given address
 func (self *Contract) getUndelegations(args dpos_sol.GetUndelegationsArgs) (undelegations []dpos_sol.DposInterfaceUndelegationData, end bool) {
-	v1_undelegations_validators, end := self.undelegations.GetUndelegationsV1Validators(&args.Delegator, args.Batch, GetUndelegationsMaxCount)
-
-	// Reserve slice capacity
-	undelegations = make([]dpos_sol.DposInterfaceUndelegationData, 0, len(v1_undelegations_validators))
-
-	for _, validator := range v1_undelegations_validators {
-		undelegation_data := self.getUndelegationV1(&args.Delegator, &validator)
-		// This should never happen
-		if undelegation_data == nil {
-			log.Printf("Error: Unable to fetch undelegation V1 for delegator %s, validator %s", &args.Delegator, validator)
-			continue
-		}
-
-		undelegations = append(undelegations, *undelegation_data)
-	}
-
-	return
-}
-
-// Returns batch of undelegation from queue for given address
-func (self *Contract) getUndelegationsV2(args dpos_sol.GetUndelegationsV2Args) (undelegations []dpos_sol.DposInterfaceUndelegationV2Data, end bool) {
 	to_skip_count := args.Batch * GetUndelegationsMaxCount
 	end = true
 
 	// Note: we always need to iterate over validators from idx == 0 as it is not known how many undelegations there is for each validator...
 	for validator_idx := uint32(0); ; validator_idx++ {
-		validator, validators_end := self.undelegations.GetUndelegationsV2Validator(&args.Delegator, validator_idx)
+		validator, validators_end := self.undelegations.GetUndelegationsValidator(&args.Delegator, validator_idx)
 		if validator == nil {
 			return
 		}
 
-		_, undelegations_ids_map := self.undelegations.GetUndelegationsV2Maps(&args.Delegator, validator)
+		_, undelegations_ids_map := self.undelegations.GetUndelegationsMaps(&args.Delegator, validator)
 
 		undelegations_ids_count := undelegations_ids_map.GetCount()
 		if undelegations_ids_count <= to_skip_count {
@@ -2090,7 +1962,7 @@ func (self *Contract) getUndelegationsV2(args dpos_sol.GetUndelegationsV2Args) (
 		to_skip_count = 0
 
 		for _, undelegation_id := range v2_undelegations_ids {
-			undelegation_data := self.getUndelegationV2(args.Delegator, *validator, undelegation_id)
+			undelegation_data := self.getUndelegation(args.Delegator, *validator, undelegation_id)
 			// This should never happen
 			if undelegation_data == nil {
 				log.Printf("Error: Unable to fetch undelegation V2 for delegator %s, validator %s, undelegation id %d", &args.Delegator, validator, undelegation_id)
@@ -2111,36 +1983,20 @@ func (self *Contract) getUndelegationsV2(args dpos_sol.GetUndelegationsV2Args) (
 }
 
 // Returns specified undelegation
-func (self *Contract) getUndelegationV2(delegator common.Address, validator common.Address, undelegation_id uint64) (undelegation_data *dpos_sol.DposInterfaceUndelegationV2Data) {
+func (self *Contract) getUndelegation(delegator common.Address, validator common.Address, undelegation_id uint64) (undelegation_data *dpos_sol.DposInterfaceUndelegationData) {
 	//&args.Delegator, &args.Validator, args.UndelegationId
-	undelegation := self.undelegations.GetUndelegationV2(&delegator, &validator, undelegation_id)
-	if undelegation == nil {
-		return
-	}
-
-	undelegation_data = new(dpos_sol.DposInterfaceUndelegationV2Data)
-	undelegation_data.UndelegationData.Validator = validator
-	// Validator can be already deleted before confirming undelegation if he had 0 rewards and stake balances
-	undelegation_data.UndelegationData.ValidatorExists = self.validators.ValidatorExists(&validator)
-	undelegation_data.UndelegationData.Stake = undelegation.Amount
-	undelegation_data.UndelegationData.Block = undelegation.Block
-	undelegation_data.UndelegationId = undelegation.Id
-
-	return
-}
-
-func (self *Contract) getUndelegationV1(delegator *common.Address, validator *common.Address) (undelegation_data *dpos_sol.DposInterfaceUndelegationData) {
-	undelegation := self.undelegations.GetUndelegationV1(delegator, validator)
+	undelegation := self.undelegations.GetUndelegation(&delegator, &validator, undelegation_id)
 	if undelegation == nil {
 		return
 	}
 
 	undelegation_data = new(dpos_sol.DposInterfaceUndelegationData)
-	undelegation_data.Validator = *validator
+	undelegation_data.Validator = validator
 	// Validator can be already deleted before confirming undelegation if he had 0 rewards and stake balances
-	undelegation_data.ValidatorExists = self.validators.ValidatorExists(validator)
+	undelegation_data.ValidatorExists = self.validators.ValidatorExists(&validator)
 	undelegation_data.Stake = undelegation.Amount
 	undelegation_data.Block = undelegation.Block
+	undelegation_data.UndelegationId = undelegation.Id
 
 	return
 }
@@ -2225,9 +2081,6 @@ func (self *Contract) isOnFicusHardfork(block types.BlockNum) bool {
 	return self.cfg.Hardforks.IsOnFicusHardfork(block)
 }
 
-func (self *Contract) isOnCornusHardfork(block types.BlockNum) bool {
-	return self.cfg.Hardforks.IsOnCornusHardfork(block)
-}
 
 func (self *Contract) saveTotalSupplyDb() {
 	self.storage.Put(storage.Stor_k_1(field_total_supply), self.total_supply.Bytes())

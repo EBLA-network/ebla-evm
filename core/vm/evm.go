@@ -90,7 +90,6 @@ type Rules struct {
 	IsAspenPartOne bool
 	IsAspenPartTwo bool
 	IsFicus        bool
-	IsCornus       bool
 }
 
 type Block struct {
@@ -202,7 +201,7 @@ func (self *EVM) Main(trx *Transaction) (ret ExecutionResult, execError error) {
 		available_funds_gas := bigutil.Div(caller_balance, gas_price)
 		caller.SubBalance(bigutil.Mul(available_funds_gas, gas_price))
 
-		if self.rules.IsCornus && self.trx.Nonce.Cmp(sender_nonce) >= 0 {
+		if self.trx.Nonce.Cmp(sender_nonce) >= 0 {
 			caller.SetNonce(bigutil.Add(self.trx.Nonce, big.NewInt(1)))
 		}
 		return consensusErr(ret, available_funds_gas.Uint64(), ErrInsufficientBalanceForGas)
@@ -224,16 +223,12 @@ func (self *EVM) Main(trx *Transaction) (ret ExecutionResult, execError error) {
 
 	gas_intrinsic, err := IntrinsicGas(self.trx.Input, contract_creation)
 	if err != nil {
-		if self.rules.IsCornus {
-			caller.SetNonce(bigutil.Add(self.trx.Nonce, big.NewInt(1)))
-		}
+		caller.SetNonce(bigutil.Add(self.trx.Nonce, big.NewInt(1)))
 		return consensusErr(ret, gas_cap, err)
 	}
 
 	if gas_cap < gas_intrinsic {
-		if self.rules.IsCornus {
-			caller.SetNonce(bigutil.Add(self.trx.Nonce, big.NewInt(1)))
-		}
+		caller.SetNonce(bigutil.Add(self.trx.Nonce, big.NewInt(1)))
 		return consensusErr(ret, gas_cap, ErrIntrinsicGas)
 	}
 

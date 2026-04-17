@@ -17,20 +17,10 @@ func (st *StateTransition) applyHFChanges() {
 				acc.SetCode(dpos_sol.AspenDposImplBytecode)
 			}
 		}
-		if st.chain_config.Hardforks.IsCornusHardfork(blk_n) {
-			acc := st.state.GetAccount(dpos.ContractAddress())
-			acc.SetCode(dpos_sol.CornusDposImplBytecode)
-		}
 	}
 
 	if st.slashing_contract != nil && st.chain_config.Hardforks.IsOnMagnoliaHardfork(blk_n) {
 		st.slashing_contract.Register(st.evm.RegisterPrecompiledContract)
 	}
 
-	if st.chain_config.Hardforks.IsCornusHardfork(blk_n) {
-		for acc, byteCode := range op_stack.OpPrecompiles {
-			acc := st.state.GetAccount(&acc)
-			acc.SetCode(byteCode)
-		}
-	}
 }

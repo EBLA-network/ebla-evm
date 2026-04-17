@@ -11,33 +11,18 @@ contract DposDummyImpl {
         uint256 amount
     );
     event Undelegated(
-        address indexed delegator,
-        address indexed validator,
+        address indexed delegator, 
+        address indexed validator, 
+        uint64 indexed undelegation_id, 
         uint256 amount
     );
     event UndelegateConfirmed(
-        address indexed delegator,
-        address indexed validator,
+        address indexed delegator, 
+        address indexed validator, 
+        uint64 indexed undelegation_id, 
         uint256 amount
     );
     event UndelegateCanceled(
-        address indexed delegator,
-        address indexed validator,
-        uint256 amount
-    );
-    event UndelegatedV2(
-        address indexed delegator, 
-        address indexed validator, 
-        uint64 indexed undelegation_id, 
-        uint256 amount
-    );
-    event UndelegateConfirmedV2(
-        address indexed delegator, 
-        address indexed validator, 
-        uint64 indexed undelegation_id, 
-        uint256 amount
-    );
-    event UndelegateCanceledV2(
         address indexed delegator, 
         address indexed validator, 
         uint64 indexed undelegation_id, 
@@ -62,6 +47,9 @@ contract DposDummyImpl {
     event CommissionSet(address indexed validator, uint16 commission);
     event ValidatorRegistered(address indexed validator);
     event ValidatorInfoSet(address indexed validator);
+    event InactivityPenalty(address indexed validator, uint64 new_factor);
+    event ValidatorEvicted(address indexed validator);
+    event VotingPowerRecovered(address indexed validator);
 
     struct ValidatorBasicInfo {
         // Total number of delegated tokens to the validator
@@ -104,22 +92,12 @@ contract DposDummyImpl {
         DelegatorInfo delegation;
     }
 
-    // Retun value for getUndelegations method
+    // New EBLA - Retun value for getUndelegationsV2 method
     struct UndelegationData {
-        // Number of tokens that were locked
         uint256 stake;
-        // block number when it will be unlocked
         uint64 block;
-        // Validator address
         address validator;
-        // Flag if validator still exists - in case he has 0 stake and 0 rewards, validator is deleted from memory & db
         bool validator_exists;
-    }
-
-    // Retun value for getUndelegationsV2 method
-    struct UndelegationV2Data {
-        // Undelegation data
-        UndelegationData undelegation_data;
         // Undelegation id
         uint64 undelegation_id;
     }
@@ -127,26 +105,14 @@ contract DposDummyImpl {
     // Delegates tokens to specified validator
     function delegate(address validator) external payable {}
 
-    // Undelegates <amount> of tokens from specified validator - creates undelegate request
-    // Note: deprecated (pre cornus hardfork) - use undelegateV2 instead
-    function undelegate(address validator, uint256 amount) external {}
-
-    // Undelegates <amount> of tokens from specified validator - creates undelegate request and returns unique undelegation_id <per delegator>
-    function undelegateV2(address validator, uint256 amount) external returns (uint64 undelegation_id) {}
-
-    // Confirms undelegate request
-    // Note: deprecated (pre cornus hardfork) - use confirmUndelegateV2 instead
-    function confirmUndelegate(address validator) external {}
+    // Undelegates <amount> of tokens from specified validator, returns unique undelegation_id
+    function undelegate(address validator, uint256 amount) external returns (uint64 undelegation_id) {}
 
     // Confirms undelegate request with <undelegation_id> from <validator>
-    function confirmUndelegateV2(address validator, uint64 undelegation_id) external {}
-
-    // Cancel undelegate request
-    // Note: deprecated (pre cornus hardfork) - use confirmUndelegateV2 instead
-    function cancelUndelegate(address validator) external {}
+    function confirmUndelegate(address validator, uint64 undelegation_id) external {}
 
     // Cancel undelegate request with <undelegation_id> from <validator>
-    function cancelUndelegateV2(address validator, uint64 undelegation_id) external {}
+    function cancelUndelegate(address validator, uint64 undelegation_id) external {}
 
     // Redelegates <amount> of tokens from one validator to the other
     function reDelegate(
@@ -271,20 +237,6 @@ contract DposDummyImpl {
         view
         returns (UndelegationData[] memory undelegations, bool end) {}
 
-   /**
-     * @notice Returns list of V2 undelegations for specified delegator
-     *
-     * @param delegator       delegator account address
-     * @param batch           Batch number to be fetched. If the list is too big it cannot return all undelegations in one call. Instead, users are fetching batches of 50 undelegations at a time
-     *
-     * @return undelegations_v2  Batch of N V2 undelegations
-     * @return end            Flag if there are no more undelegations left. To get all undelegations, caller should fetch all batches until he sees end == true
-     *
-     */
-    function getUndelegationsV2(address delegator, uint32 batch)
-        external
-        view
-        returns (UndelegationV2Data[] memory undelegations_v2, bool end) {}
 
      /**
      * @notice Returns V2 undelegation for specified delegator, validator & and undelegation_id
@@ -295,8 +247,9 @@ contract DposDummyImpl {
      *
      * @return undelegation_v2
      */
-    function getUndelegationV2(address delegator, address validator, uint64 undelegation_id)
+    function getUndelegation(address delegator, address validator, uint64 undelegation_id)
         external
         view
-        returns (UndelegationV2Data memory undelegation_v2) {}
+        returns (UndelegationData memory undelegation) {}
+
 }
