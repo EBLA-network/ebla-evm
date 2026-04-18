@@ -143,6 +143,7 @@ var (
 	// NEW - EBLA - Inactivity penalty fields
 	field_voting_power_factor = []byte{9}   // per-validator, uint64 in basis points (stored as factor+1)
 	field_last_active_block   = []byte{10}  // per-validator, uint64 PBFT block number
+	field_eviction_cursor     = []byte{11}  // per-validator, uint32 eviction cursor (presence = in-progress)
 )
 
 // State of the rewards distribution algorithm
@@ -589,15 +590,15 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 			return nil, err
 		}
 		return nil, self.delegate(ctx, block_num, args)
-// new EBLA
+
 	case "undelegate":
 		var args dpos_sol.UndelegateArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
-			fmt.Println("Unable to parse undelegateV2 input args: ", err)
+			fmt.Println("Unable to parse undelegate input args: ", err)
 			return nil, err
 		}
 
-		undelegation_id, err := self.undelegate(ctx, block_num, args, true)
+		undelegation_id, err := self.undelegate(ctx, block_num, args)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +606,7 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		return method.Outputs.Pack(undelegation_id)
 
 	case "confirmUndelegate":
-		var args dpos_sol.ConfirmUndelegateArgs      // renamed from ConfirmUndelegateV2Args
+		var args dpos_sol.ConfirmUndelegateArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
 			fmt.Println("Unable to parse confirmUndelegate input args: ", err)
 			return nil, err
@@ -613,7 +614,7 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		return nil, self.confirmUndelegate(ctx, block_num, args.Validator, args.UndelegationId)
 
 	case "cancelUndelegate":
-		var args dpos_sol.CancelUndelegateArgs     // renamed from CancelUndelegateV2Args
+		var args dpos_sol.CancelUndelegateArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
 			fmt.Println("Unable to parse cancelUndelegate input args: ", err)
 			return nil, err
@@ -970,13 +971,38 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 func (self *Contract) applyInactivityPenalties(current_block uint64) {
 	epoch_start := current_block - 10000
 
-	// Collect eviction candidates — do NOT evict during iteration
+	// Block-wide budget shared by all in-progress and newly-triggered evictions
+	remaining_budget := MaxEvictionsPerBlock
+
+	// === STEP 1: Resume any in-progress evictions from previous blocks ===
+	self.validators.ForEachValidator(func(validatorAddress common.Address) {
+		if remaining_budget == 0 {
+			return
+		}
+		in_progress, _ := self.getEvictionCursor(&validatorAddress)
+		if in_progress {
+			processed := self.forceEvictValidator(&validatorAddress, current_block, remaining_budget)
+			if processed > remaining_budget {
+				remaining_budget = 0
+			} else {
+				remaining_budget -= processed
+			}
+		}
+	})
+
+	// === STEP 2: Scan for new penalties and collect new eviction candidates ===
 	var toEvict []common.Address
 
 	self.validators.ForEachValidator(func(validatorAddress common.Address) {
 		validator := self.validators.GetValidator(&validatorAddress)
 		if validator == nil || validator.TotalStake.Cmp(big.NewInt(0)) == 0 {
-			return // skip deleted or zero-stake validators
+			return
+		}
+
+		// Skip validators already being evicted (handled in Step 1)
+		in_progress, _ := self.getEvictionCursor(&validatorAddress)
+		if in_progress {
+			return
 		}
 
 		last_active := self.getLastActiveBlock(&validatorAddress)
@@ -988,7 +1014,6 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		}
 
 		// Active during this epoch — no penalty
-		// Use >= so validators initialized at previous epoch boundary get a full epoch
 		if last_active >= epoch_start {
 			return
 		}
@@ -1010,13 +1035,12 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		new_vote_count := voteCountWithFactor(
 			validator.TotalStake, &self.cfg, current_block, new_factor,
 		)
-
 		// Update global eligible_vote_count
 		if prev_vote_count != new_vote_count {
 			self.eligible_vote_count -= prev_vote_count
 			self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
 		}
-
+		
 		// Emit penalty event
 		self.evm.AddLog(self.logs.MakeInactivityPenaltyLog(&validatorAddress, new_factor))
 
@@ -1029,46 +1053,109 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		}
 	})
 
-	// Evict AFTER iteration completes to avoid concurrent modification
+	// === STEP 3: Start new evictions, consuming remaining budget ===
 	for _, addr := range toEvict {
-		self.forceEvictValidator(&addr, current_block)
+		if remaining_budget == 0 {
+			// Out of budget this block. Zero voting power NOW (stops block production and
+			// reward earning) and mark for eviction to be resumed in the next block's Step 1.
+			factor := self.getVotingPowerFactor(&addr)
+			validator := self.validators.GetValidator(&addr)
+			if validator != nil {
+				remaining_votes := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block, factor)
+				if remaining_votes > 0 && self.eligible_vote_count >= remaining_votes {
+					self.eligible_vote_count -= remaining_votes
+				}
+				self.setVotingPowerFactor(&addr, 0)
+				self.evm.AddLog(self.logs.MakeValidatorEvictedLog(&addr))
+				self.setEvictionCursor(&addr, 0)
+			}
+			continue
+		}
+		processed := self.forceEvictValidator(&addr, current_block, remaining_budget)
+		if processed > remaining_budget {
+			remaining_budget = 0
+		} else {
+			remaining_budget -= processed
+		}
 	}
 }
 
-// forceEvictValidator triggers normal undelegation for ALL delegators of a validator.
-// No coins are burned — all coins return to original wallets via standard undelegation process.
-// Uses V2 undelegation to avoid conflicts with existing pending undelegations.
-func (self *Contract) forceEvictValidator(validatorAddress *common.Address, block uint64) {
+// MaxEvictionsPerBlock caps the number of delegator-evictions processed in a single block.
+// If a validator has more delegators than this, eviction continues across subsequent blocks.
+const MaxEvictionsPerBlock uint32 = 1000
+
+// forceEvictValidator processes forced undelegation for delegators of an inactive validator.
+// Bounded at `budget` delegators per call. First call zeroes voting power immediately
+// (validator stops producing blocks, stops earning rewards) even if delegator processing
+// spills over multiple blocks.
+//
+// Since RemoveDelegation (invoked via undelegateInternal) atomically removes the delegator
+// from the reverse index, continuation always re-reads from batch=0 — the index naturally
+// shrinks until empty.
+//
+// Returns the number of delegators processed this invocation.
+func (self *Contract) forceEvictValidator(validatorAddress *common.Address, block uint64, budget uint32) uint32 {
 	validator := self.validators.GetValidator(validatorAddress)
 	if validator == nil {
-		return
+		// Validator may have been fully drained by other paths; clear any stale cursor.
+		self.clearEvictionCursor(validatorAddress)
+		return 0
 	}
 
-	// Get remaining effective vote count and subtract from global
-	factor := self.getVotingPowerFactor(validatorAddress)
-	remaining_votes := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
-	if remaining_votes > 0 {
-		self.eligible_vote_count -= remaining_votes
+	in_progress, _ := self.getEvictionCursor(validatorAddress)
+
+	// First invocation: zero voting power and decrement global eligible count
+	if !in_progress {
+		factor := self.getVotingPowerFactor(validatorAddress)
+		remaining_votes := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
+		if remaining_votes > 0 && self.eligible_vote_count >= remaining_votes {
+			self.eligible_vote_count -= remaining_votes
+		}
+		self.setVotingPowerFactor(validatorAddress, 0)
+		self.evm.AddLog(self.logs.MakeValidatorEvictedLog(validatorAddress))
+		self.setEvictionCursor(validatorAddress, 0)
 	}
 
-	// Iterate all delegators and create V2 undelegation for each
-	// (Implementation depends on delegations iteration API — 
-	//  use self.delegations.ForEachDelegation or similar)
-	//
-	// For each delegator:
-	//   1. Get delegation.Stake (full coin amount)
-	//   2. Create undelegation entry with locking period
-	//   3. Subtract from validator.TotalStake
-	//   4. Delegator can later call confirmUndelegateV2 to reclaim coins
-	//
-	// NOTE: This must NOT call the public undelegate() which has
-	//       CallerAccount checks. Use internal undelegation creation.
+	// Process up to `budget` delegators this block
+	page_size := budget
+	if page_size > MaxEvictionsPerBlock {
+		page_size = MaxEvictionsPerBlock
+	}
+	if page_size == 0 {
+		return 0
+	}
 
-	// Set factor to 0 (fully evicted)
-	self.setVotingPowerFactor(validatorAddress, 0)
+	// Always read batch=0: RemoveDelegation shrinks the reverse index as we go, so
+	// batch 0 always contains the "next N remaining" delegators.
+	delegators, end := self.delegations.GetValidatorDelegators(validatorAddress, 0, page_size)
 
-	// Emit eviction event
-	self.evm.AddLog(self.logs.MakeValidatorEvictedLog(validatorAddress))
+	processed := uint32(0)
+	for i := range delegators {
+		delegator := delegators[i]
+		delegation := self.delegations.GetDelegation(&delegator, validatorAddress)
+		if delegation == nil {
+			// Defensive: should not happen, because the reverse index is updated atomically
+			// with RemoveDelegation. Continue to next entry if it ever does.
+			continue
+		}
+		// amount = delegation.Stake (full remaining ACTIVE stake; does NOT include pending
+		// undelegations — those live in the Undelegations store). This is what prevents
+		// the double-coin attack when a delegator manually undelegated before eviction.
+		if _, err := self.undelegateInternal(block, validatorAddress, &delegator, delegation.Stake); err != nil {
+			fmt.Println("forceEvictValidator: undelegateInternal failed for", delegator.Hex(), "err:", err)
+		}
+		processed++
+	}
+
+	if end {
+		// No more delegators — eviction complete
+		self.clearEvictionCursor(validatorAddress)
+	} else {
+		// More delegators remain; keep cursor set (value 0; it's just a flag)
+		self.setEvictionCursor(validatorAddress, 0)
+	}
+
+	return processed
 }
 
 func (self *Contract) delegate_update_values(ctx vm.CallFrame, validator *Validator, prev_vote_count uint64, factor uint64) {
@@ -1115,7 +1202,7 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 		state.Count++
 	}
 
-	factor := self.getVotingPowerFactor(&validatorAddress)
+	factor := self.getVotingPowerFactor(&args.Validator)
 	prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, block, factor)
 
 	if delegation == nil {
@@ -1222,6 +1309,9 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 	// We can delete validator object as it doesn't have any stake anymore (only before the magnolia hardfork)
 	if !self.isOnMagnoliaHardfork(block) && validator.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
 		self.validators.DeleteValidator(&args.Validator)
+		self.clearVotingPowerFactor(&args.Validator)
+		self.clearLastActiveBlock(&args.Validator)
+		self.clearEvictionCursor(&args.Validator)
 		self.state_put(&state_k, nil)
 	} else {
 		self.state_put(&state_k, state)
@@ -1265,6 +1355,9 @@ func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, 
 
 			if validator.UndelegationsCount == 0 && validator.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
 				self.validators.DeleteValidator(&validator_addr)
+				self.clearVotingPowerFactor(&validator_addr)
+				self.clearLastActiveBlock(&validator_addr)
+				self.clearEvictionCursor(&validator_addr)
 				self.state_get_and_decrement(validator_addr[:], BlockToBytes(validator.LastUpdated))
 			} else {
 				if self.isOnFicusHardfork(block) {
@@ -1451,6 +1544,9 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		if validator_from.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards_from.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
 			if !self.isOnMagnoliaHardfork(block) || validator_from.UndelegationsCount == 0 {
 				self.validators.DeleteValidator(&args.ValidatorFrom)
+				self.clearVotingPowerFactor(&args.ValidatorFrom)
+				self.clearLastActiveBlock(&args.ValidatorFrom)
+				self.clearEvictionCursor(&args.ValidatorFrom)
 				self.state_put(&state_k, nil)
 			} else {
 				if self.isOnFicusHardfork(block) {
@@ -1608,6 +1704,9 @@ func (self *Contract) claimCommissionRewards(ctx vm.CallFrame, block types.Block
 	if validator.TotalStake.Cmp(big.NewInt(0)) == 0 {
 		if !self.isOnMagnoliaHardfork(block) || validator.UndelegationsCount == 0 {
 			self.validators.DeleteValidator(&args.Validator)
+			self.clearVotingPowerFactor(&args.Validator)
+			self.clearLastActiveBlock(&args.Validator)
+			self.clearEvictionCursor(&args.Validator)
 			self.state_get_and_decrement(args.Validator[:], BlockToBytes(validator.LastUpdated))
 		} else {
 			if self.isOnPhalaenopsisHardfork(block) {
@@ -2130,6 +2229,29 @@ func (self *Contract) clearLastActiveBlock(validator *common.Address) {
 	self.storage.Put(storage.Stor_k_1(field_last_active_block, validator[:]), nil)
 }
 
+// getEvictionCursor returns whether a forced eviction is in progress for this validator
+// and the current pagination cursor. Presence of any stored value = in-progress.
+func (self *Contract) getEvictionCursor(validator *common.Address) (in_progress bool, cursor uint32) {
+	self.storage.Get(storage.Stor_k_1(field_eviction_cursor, validator[:]), func(bytes []byte) {
+		in_progress = true
+		if len(bytes) >= 4 {
+			cursor = uint32(bytes[0])<<24 | uint32(bytes[1])<<16 | uint32(bytes[2])<<8 | uint32(bytes[3])
+		}
+	})
+	return
+}
+
+// setEvictionCursor stores the cursor and marks eviction as in-progress for this validator.
+func (self *Contract) setEvictionCursor(validator *common.Address, cursor uint32) {
+	buf := []byte{byte(cursor >> 24), byte(cursor >> 16), byte(cursor >> 8), byte(cursor)}
+	self.storage.Put(storage.Stor_k_1(field_eviction_cursor, validator[:]), buf)
+}
+
+// clearEvictionCursor removes the eviction cursor, marking eviction as complete.
+func (self *Contract) clearEvictionCursor(validator *common.Address) {
+	self.storage.Put(storage.Stor_k_1(field_eviction_cursor, validator[:]), nil)
+}
+
 // voteCountWithFactor calculates vote count with the voting power factor applied.
 // factor is in basis points: 10000 = 100%, 9500 = 95%, etc.
 func voteCountWithFactor(staking_balance *big.Int, cfg *chain_config.ChainConfig, block types.BlockNum, factor uint64) uint64 {
@@ -2211,4 +2333,56 @@ func Max(x, y uint64) uint64 {
 		return y
 	}
 	return x
+}
+// undelegateInternal is a consensus-triggered internal undelegation used ONLY by forceEvictValidator.
+// It is NOT reachable from the ABI dispatch (no "case" entry in Run()), so user calldata cannot invoke it.
+// Unlike the public undelegate(), this bypasses ctx.CallerAccount ownership checks because
+// the caller is the network itself (consensus), not a transaction signer.
+//
+// Returns the new undelegation_id. Coins remain in the contract until delegator calls confirmUndelegate.
+//
+// Pre-conditions:
+//   - validator exists (non-nil)
+//   - delegator has an active delegation to this validator
+//   - amount equals delegation.Stake (full eviction of this delegator's remaining stake)
+func (self *Contract) undelegateInternal(
+	block types.BlockNum,
+	validator_addr *common.Address,
+	delegator_addr *common.Address,
+	amount *big.Int,
+) (*uint64, error) {
+	validator := self.validators.GetValidator(validator_addr)
+	if validator == nil {
+		return nil, ErrNonExistentValidator
+	}
+
+	delegation := self.delegations.GetDelegation(delegator_addr, validator_addr)
+	if delegation == nil {
+		return nil, ErrNonExistentDelegation
+	}
+	if delegation.Stake.Cmp(amount) < 0 {
+		return nil, ErrInsufficientDelegation
+	}
+
+	// Decrement validator total stake and global delegated amount
+	validator.TotalStake = bigutil.Sub(validator.TotalStake, amount)
+	amount_u256, _ := uint256.FromBig(amount)
+	self.amount_delegated.Sub(self.amount_delegated, amount_u256)
+
+	// Full eviction: remove the delegation. This also removes the delegator from the
+	// reverse index (see delegations.go RemoveDelegation after F11).
+	self.delegations.RemoveDelegation(delegator_addr, validator_addr)
+
+	// Create pending undelegation — coins stay in the contract until the delegator calls confirmUndelegate
+	undelegation_id := self.undelegations.CreateUndelegation(delegator_addr, validator_addr, block, amount)
+	validator.UndelegationsCount++
+
+	// Persist validator state. EBLA runs Magnolia from block 0, so the first arg is always true,
+	// but we read from config for consistency with other call sites.
+	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), validator_addr, validator)
+
+	// Emit canonical Undelegated event
+	self.evm.AddLog(self.logs.MakeUndelegatedLog(delegator_addr, validator_addr, undelegation_id, amount))
+
+	return &undelegation_id, nil
 }

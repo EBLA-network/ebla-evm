@@ -25,6 +25,10 @@ type Delegations struct {
 
 	delegations_field                  []byte
 	delegators_validators_field_prefix []byte
+	// Reverse index: validator -> set of delegators. Used by forceEvictValidator to
+	// enumerate all delegators of an evicted validator without a full scan. Updated
+	// atomically alongside the forward index in CreateDelegation and RemoveDelegation.
+	validators_delegators_field_prefix []byte
 }
 
 func (self *Delegations) Init(stor *contract_storage.StorageWrapper, prefix []byte) {
@@ -33,6 +37,7 @@ func (self *Delegations) Init(stor *contract_storage.StorageWrapper, prefix []by
 	// Init Delegations storage fields keys - relative to the prefix
 	self.delegations_field = append(prefix, []byte{0}...)
 	self.delegators_validators_field_prefix = append(prefix, []byte{1}...)
+	self.validators_delegators_field_prefix = append(prefix, []byte{2}...)
 }
 
 // Checks if delegation exists
@@ -83,18 +88,26 @@ func (self *Delegations) CreateDelegation(delegator_address *common.Address, val
 	delegation_key := self.genDelegationKey(delegator_address, validator_address)
 	self.storage.Put(&delegation_key, rlp.MustEncodeToBytes(delegation))
 
-	// Adds validator into delegator's validators list
+	// Adds validator into delegator's validators list (forward index)
 	delegator_validators := self.getDelegatorValidatorsList(delegator_address)
 	delegator_validators.CreateAccount(validator_address)
+
+	// Adds delegator into validator's delegators list (reverse index)
+	validator_delegators := self.getValidatorDelegatorsList(validator_address)
+	validator_delegators.CreateAccount(delegator_address)
 }
 
 func (self *Delegations) RemoveDelegation(delegator_address *common.Address, validator_address *common.Address) {
 	delegation_key := self.genDelegationKey(delegator_address, validator_address)
 	self.storage.Put(&delegation_key, nil)
 
-	// Removes validator from delegator's validators list
+	// Removes validator from delegator's validators list (forward index)
 	delegator_validators := self.getDelegatorValidatorsList(delegator_address)
 	delegator_validators.RemoveAccount(validator_address)
+
+	// Removes delegator from validator's delegators list (reverse index)
+	validator_delegators := self.getValidatorDelegatorsList(validator_address)
+	validator_delegators.RemoveAccount(delegator_address)
 }
 
 func (self *Delegations) GetDelegatorValidatorsAddresses(delegator_address *common.Address, batch uint32, count uint32) ([]common.Address, bool) {
@@ -108,6 +121,23 @@ func (self *Delegations) getDelegatorValidatorsList(delegator_address *common.Ad
 	delegator_validators.Init(self.storage, delegator_validators_field)
 
 	return delegator_validators
+}
+
+// getValidatorDelegatorsList returns the AddressesIMap for the reverse index (validator -> delegators).
+func (self *Delegations) getValidatorDelegatorsList(validator_address *common.Address) *contract_storage.AddressesIMap {
+	validator_delegators := new(contract_storage.AddressesIMap)
+	validator_delegators_field := append(self.validators_delegators_field_prefix, validator_address[:]...)
+	validator_delegators.Init(self.storage, validator_delegators_field)
+
+	return validator_delegators
+}
+
+// GetValidatorDelegators returns a paginated list of delegators for a validator.
+// Iteration order is deterministic (trie key order via AddressesIMap.GetAccounts).
+// Used by forceEvictValidator.
+func (self *Delegations) GetValidatorDelegators(validator_address *common.Address, batch uint32, count uint32) ([]common.Address, bool) {
+	validator_delegators := self.getValidatorDelegatorsList(validator_address)
+	return validator_delegators.GetAccounts(batch, count)
 }
 
 func (self *Delegations) GetAllDelegatorValidatorsAddresses(delegator_address *common.Address) []common.Address {

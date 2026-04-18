@@ -177,31 +177,29 @@ interface DposInterface {
         view
         returns (DelegationData[] memory delegations, bool end);
 
-   /**
+    /**
      * @notice Returns list of undelegations for specified delegator
      *
      * @param delegator       delegator account address
      * @param batch           Batch number to be fetched. If the list is too big it cannot return all undelegations in one call. Instead, users are fetching batches of 50 undelegations at a time
      *
-     * @return undelegations_v2  Batch of N undelegations
+     * @return undelegations  Batch of N undelegations
      * @return end            Flag if there are no more undelegations left. To get all undelegations, caller should fetch all batches until he sees end == true
      * 
-     * New EBLA
      */
     function getUndelegations(address delegator, uint32 batch)
         external
         view
         returns (UndelegationData[] memory undelegations, bool end);
 
-     /**
-     * @notice Returns V2 undelegation for specified delegator, validator & and undelegation_id
+    /**
+     * @notice Returns undelegation for specified delegator, validator & and undelegation_id
      *
      * @param delegator        delegator account address
      * @param validator        validator account address
      * @param undelegation_id  undelegation id
      *
-     * @return undelegation_v2
-     * New EBLA      
+     * @return undelegation   
      */
     function getUndelegation(address delegator, address validator, uint64 undelegation_id)
         external

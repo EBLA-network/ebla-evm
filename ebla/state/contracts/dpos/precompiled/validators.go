@@ -231,12 +231,19 @@ func (self *Validators) GetValidatorRewards(validator_address *common.Address) (
 }
 
 // ForEachValidator iterates all registered validator addresses in deterministic order.
-// Uses IterableMap which stores validators by insertion-order position index.
+// Uses paginated GetAccounts under the hood (AddressesIMap has no native ForEach).
+// Iteration order is trie-key deterministic.
 func (self *Validators) ForEachValidator(cb func(addr common.Address)) {
-    self.validators_list.ForEach(func(addr common.Address) bool {
-        cb(addr)
-        return false // continue iteration
-    })
+	const page_size uint32 = 100
+	for batch := uint32(0); ; batch++ {
+		addrs, end := self.validators_list.GetAccounts(batch, page_size)
+		for _, addr := range addrs {
+			cb(addr)
+		}
+		if end {
+			return
+		}
+	}
 }
 
 func (self *Validators) ModifyValidatorRewards(validator_address *common.Address, rewards *ValidatorRewards) {
