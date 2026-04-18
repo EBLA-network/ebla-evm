@@ -1,12 +1,8 @@
 package dpos
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 
-	"github.com/EBLA-network/ebla-evm/accounts/abi"
-	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
 	"github.com/EBLA-network/ebla-evm/core/vm"
 	dpos_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/solidity"
@@ -14,41 +10,6 @@ import (
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/holiman/uint256"
 )
-
-// GetOldClaimAllRewardsABI returns the *old* ABI method for claiming all rewards in the DPOS contract.
-// It should be there, so we don't have a different result during the syncing. And it is hardcoded because we don't need it in the actual interface.
-// If the block number is part of the Aspen hardfork, it returns nil.
-// If the input matches the specified hex value, it returns the ABI method for claiming all rewards.
-func (self *Contract) GetOldClaimAllRewardsABI(input []byte, blockNum types.BlockNum) *abi.Method {
-	if bytes.Equal(input[0:4], common.FromHex("0x09b72e00")) {
-		method := new(abi.Method)
-		err := json.Unmarshal([]byte(`{
-			"name": "claimAllRewards",
-			"stateMutability": "nonpayable",
-			"type": "function",
-			"inputs": [
-				{
-					"internalType": "uint32",
-					"name": "batch",
-					"type": "uint32"
-				}
-			],
-			"outputs": [
-				{
-					"internalType": "bool",
-					"name": "end",
-					"type": "bool"
-				}
-			]
-		}`), method)
-
-		if err != nil {
-			return nil
-		}
-		return method
-	}
-	return nil
-}
 
 // Pays off accumulated rewards back to delegator address from multiple validators at a time
 // NOTE this is old PRE-ASPEN HF version

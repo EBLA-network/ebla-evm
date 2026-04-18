@@ -250,13 +250,8 @@ func (self *Contract) RequiredGas(ctx vm.CallFrame, evm *vm.EVM) uint64 {
 	if err != nil {
 		if self.IsTransferIntoDPoSContract(ctx.Input, evm.GetBlock().Number) {
 			return TransferIntoDPoSContractGas
-		} else if !self.cfg.Hardforks.IsOnFixClaimAllHardfork(evm.GetBlock().Number) {
-			if method = self.GetOldClaimAllRewardsABI(ctx.Input, evm.GetBlock().Number); method == nil {
-				return 0
-			}
-		} else {
-			return 0
 		}
+		return 0
 	}
 	if ctx.Value.Sign() > 0 {
 		if !isPayableMethod(method.Name) {
@@ -571,13 +566,8 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 	if err != nil {
 		if self.IsTransferIntoDPoSContract(ctx.Input, block_num) {
 			return nil, nil
-		} else if !self.cfg.Hardforks.IsOnFixClaimAllHardfork(block_num) {
-			if method = self.GetOldClaimAllRewardsABI(ctx.Input, block_num); method == nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 

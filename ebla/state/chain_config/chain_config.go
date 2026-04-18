@@ -52,14 +52,9 @@ type HardforksConfig struct {
 	RewardsDistributionFrequency map[uint64]uint32
 	MagnoliaHf                   MagnoliaHfConfig
 	PhalaenopsisHfBlockNum       uint64
-	FixClaimAllBlockNum          uint64
 	AspenHf                      AspenHfConfig
 	FicusHf                      FicusHfConfig
 	InactivityPenaltyBlock uint64  // Block at which inactivity penalty activates (0 for EBLA genesis)
-}
-
-func (c *HardforksConfig) IsOnFixClaimAllHardfork(block types.BlockNum) bool {
-	return block >= c.FixClaimAllBlockNum
 }
 
 func (c *HardforksConfig) IsOnPhalaenopsisHardfork(block types.BlockNum) bool {
