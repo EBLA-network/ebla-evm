@@ -220,15 +220,6 @@ func ebla_evm_state_api_execute_transactions(
 	for i := range params.Txs {
 		tx := &params.Txs[i]
 		txResult := st.ExecuteTransaction(tx)
-
-		// Contract distribution is disabled - just add fee to the block author balance
-		if st.BlockNumber() < st.GetChainConfig().Hardforks.MagnoliaHf.BlockNum {
-			txFee := new(uint256.Int).SetUint64(txResult.GasUsed)
-			g, _ := uint256.FromBig(tx.GasPrice)
-			txFee.Mul(txFee, g)
-			st.AddTxFeeToBalance(&params.Blk.Author, txFee)
-		}
-
 		retval.ExecutionResults = append(retval.ExecutionResults, txResult)
 	}
 

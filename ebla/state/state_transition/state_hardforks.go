@@ -3,7 +3,6 @@ package state_transition
 import (
 	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
 	dpos_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/solidity"
-	"github.com/EBLA-network/ebla-evm/ebla/state/state_transition/op_stack"
 )
 
 func (st *StateTransition) applyHFChanges() {
@@ -19,7 +18,7 @@ func (st *StateTransition) applyHFChanges() {
 		}
 	}
 
-	if st.slashing_contract != nil && st.chain_config.Hardforks.IsOnMagnoliaHardfork(blk_n) {
+	if st.slashing_contract != nil {
 		st.slashing_contract.Register(st.evm.RegisterPrecompiledContract)
 	}
 

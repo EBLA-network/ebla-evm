@@ -25,11 +25,11 @@ import (
 	"github.com/EBLA-network/ebla-evm/common/math"
 	"github.com/EBLA-network/ebla-evm/core/types"
 	"github.com/EBLA-network/ebla-evm/crypto"
-	"github.com/EBLA-network/ebla-evm/params"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigconv"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/params"
 	"github.com/holiman/uint256"
 )
 
@@ -86,7 +86,6 @@ func DefaultOpts() Opts {
 type GetHashFunc = func(types.BlockNum) *big.Int
 
 type Rules struct {
-	IsMagnolia     bool
 	IsAspenPartOne bool
 	IsAspenPartTwo bool
 	IsFicus        bool

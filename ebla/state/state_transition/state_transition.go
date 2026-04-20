@@ -163,7 +163,7 @@ func (st *StateTransition) Commit() (state_root common.Hash) {
 	if st.dpos_contract != nil {
 		st.dpos_contract.CommitCall(st.get_dpos_reader(st.evm.GetBlock().Number))
 	}
-	if st.slashing_contract != nil && st.chain_config.Hardforks.IsOnMagnoliaHardfork(st.evm.GetBlock().Number) {
+	if st.slashing_contract != nil {
 		st.slashing_contract.CommitCall(st.get_slashing_reader(st.evm.GetBlock().Number))
 	}
 	return

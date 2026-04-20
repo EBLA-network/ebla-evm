@@ -3,9 +3,9 @@ package slashing
 import (
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
 	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 type IsEligibleReader interface {
@@ -42,10 +42,6 @@ func (r *Reader) getJailBlock(addr *common.Address) (jailed bool, block types.Bl
 }
 
 func (r Reader) IsJailed(block types.BlockNum, addr *common.Address) bool {
-	if !r.cfg.Hardforks.IsOnMagnoliaHardfork(block) {
-		return false
-	}
-
 	jailed, jail_block := r.getJailBlock(addr)
 	if !jailed {
 		return false

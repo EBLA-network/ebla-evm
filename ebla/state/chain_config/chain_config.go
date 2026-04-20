@@ -16,9 +16,12 @@ type Redelegation struct {
 	Amount    *big.Int
 }
 
-type MagnoliaHfConfig struct {
-	BlockNum uint64
-	JailTime uint64 // [number of blocks]
+// SlashingConfig contains slashing/jailing parameters.
+// Originally introduced by Taraxa's Magnolia hardfork; features are permanent in EBLA
+// from block 0, so the hardfork gate has been removed. Only the runtime JailTime
+// parameter remains.
+type SlashingConfig struct {
+	JailTime uint64 // number of blocks a double-voter stays jailed
 }
 
 type AspenHfConfig struct {
@@ -34,8 +37,6 @@ type FicusHfConfig struct {
 	BridgeContractAddress common.Address
 }
 
-
-
 // Leaving it here for next HF
 // type BambooRedelegation struct {
 // 	Validator common.Address
@@ -50,19 +51,15 @@ type HardforksConfig struct {
 	FixRedelegateBlockNum        uint64
 	Redelegations                []Redelegation
 	RewardsDistributionFrequency map[uint64]uint32
-	MagnoliaHf                   MagnoliaHfConfig
+	Slashing                     SlashingConfig
 	PhalaenopsisHfBlockNum       uint64
 	AspenHf                      AspenHfConfig
 	FicusHf                      FicusHfConfig
-	InactivityPenaltyBlock uint64  // Block at which inactivity penalty activates (0 for EBLA genesis)
+	InactivityPenaltyBlock       uint64 // Block at which inactivity penalty activates (0 for EBLA genesis)
 }
 
 func (c *HardforksConfig) IsOnPhalaenopsisHardfork(block types.BlockNum) bool {
 	return block >= c.PhalaenopsisHfBlockNum
-}
-
-func (c *HardforksConfig) IsOnMagnoliaHardfork(block types.BlockNum) bool {
-	return block >= c.MagnoliaHf.BlockNum
 }
 
 func (c *HardforksConfig) IsOnAspenHardforkPartOne(block types.BlockNum) bool {
@@ -77,7 +74,6 @@ func (c *HardforksConfig) IsOnFicusHardfork(block types.BlockNum) bool {
 	return block >= c.FicusHf.BlockNum
 }
 
-
 func isForked(fork_start, block_num types.BlockNum) bool {
 	if fork_start == types.BlockNumberNIL || block_num == types.BlockNumberNIL {
 		return false
@@ -87,7 +83,6 @@ func isForked(fork_start, block_num types.BlockNum) bool {
 
 func (c *HardforksConfig) Rules(num types.BlockNum) vm.Rules {
 	return vm.Rules{
-		IsMagnolia:     isForked(c.MagnoliaHf.BlockNum, num),
 		IsAspenPartOne: isForked(c.AspenHf.BlockNumPartOne, num),
 		IsAspenPartTwo: isForked(c.AspenHf.BlockNumPartTwo, num),
 		IsFicus:        isForked(c.FicusHf.BlockNum, num),
@@ -143,5 +138,5 @@ func (self *ChainConfig) GenesisBalancesSum() *big.Int {
 }
 
 func (c *HardforksConfig) IsOnInactivityPenaltyHardfork(block types.BlockNum) bool {
-    return block >= c.InactivityPenaltyBlock
+	return block >= c.InactivityPenaltyBlock
 }

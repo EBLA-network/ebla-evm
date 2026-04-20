@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/EBLA-network/ebla-evm/crypto"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
 	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/holiman/uint256"
 
 	"github.com/EBLA-network/ebla-evm/accounts/abi"
@@ -141,9 +141,9 @@ var (
 	field_yield         = []byte{8}
 
 	// NEW - EBLA - Inactivity penalty fields
-	field_voting_power_factor = []byte{9}   // per-validator, uint64 in basis points (stored as factor+1)
-	field_last_active_block   = []byte{10}  // per-validator, uint64 PBFT block number
-	field_eviction_cursor     = []byte{11}  // per-validator, uint32 eviction cursor (presence = in-progress)
+	field_voting_power_factor = []byte{9}  // per-validator, uint64 in basis points (stored as factor+1)
+	field_last_active_block   = []byte{10} // per-validator, uint64 PBFT block number
+	field_eviction_cursor     = []byte{11} // per-validator, uint32 eviction cursor (presence = in-progress)
 )
 
 // State of the rewards distribution algorithm
@@ -571,13 +571,11 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		return nil, err
 	}
 
-
 	if ctx.Value.Sign() > 0 {
 		if !isPayableMethod(method.Name) {
 			return nil, ErrNonPayableMethod
 		}
 	}
-
 
 	// First 4 bytes is method signature !!!!
 	input := ctx.Input[4:]
@@ -956,7 +954,7 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 
 	// === NEW: Epoch boundary inactivity penalty check ===
 	if self.cfg.Hardforks.IsOnInactivityPenaltyHardfork(current_block_num) {
-		if current_block_num > 0 && current_block_num % 10000 == 0 {
+		if current_block_num > 0 && current_block_num%10000 == 0 {
 			self.applyInactivityPenalties(current_block_num)
 		}
 	}
@@ -1040,7 +1038,7 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 			self.eligible_vote_count -= prev_vote_count
 			self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
 		}
-		
+
 		// Emit penalty event
 		self.evm.AddLog(self.logs.MakeInactivityPenaltyLog(&validatorAddress, new_factor))
 
@@ -1227,7 +1225,7 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
+	self.validators.ModifyValidator(true, &args.Validator, validator)
 	self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 	self.evm.AddLog(self.logs.MakeDelegatedLog(ctx.CallerAccount.Address(), &args.Validator, ctx.Value))
 
@@ -1306,18 +1304,9 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
 	}
 
-	// We can delete validator object as it doesn't have any stake anymore (only before the magnolia hardfork)
-	if !self.isOnMagnoliaHardfork(block) && validator.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
-		self.validators.DeleteValidator(&args.Validator)
-		self.clearVotingPowerFactor(&args.Validator)
-		self.clearLastActiveBlock(&args.Validator)
-		self.clearEvictionCursor(&args.Validator)
-		self.state_put(&state_k, nil)
-	} else {
-		self.state_put(&state_k, state)
-		self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
-		self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
-	}
+	self.state_put(&state_k, state)
+	self.validators.ModifyValidator(true, &args.Validator, validator)
+	self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 
 	delegationLockingPeriod := uint64(self.cfg.DPOS.DelegationLockingPeriod)
 
@@ -1342,27 +1331,23 @@ func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, 
 
 	self.undelegations.RemoveUndelegation(ctx.CallerAccount.Address(), &validator_addr, undelegation_id)
 
-	if self.isOnMagnoliaHardfork(block) {
-		validator := self.validators.GetValidator(&validator_addr)
-		// Validator might be already deleted if all delegators undelegated from the validator before magnolia hardfork
-		if validator != nil {
-			// validator.UndelegationsCount might be == 0 if all delegators undelegated from the validator before magnolia hardfork
-			if validator.UndelegationsCount > 0 {
-				validator.UndelegationsCount--
-			}
+	validator := self.validators.GetValidator(&validator_addr)
+	if validator != nil {
+		if validator.UndelegationsCount > 0 {
+			validator.UndelegationsCount--
+		}
 
-			validator_rewards := self.validators.GetValidatorRewards(&validator_addr)
+		validator_rewards := self.validators.GetValidatorRewards(&validator_addr)
 
-			if validator.UndelegationsCount == 0 && validator.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
-				self.validators.DeleteValidator(&validator_addr)
-				self.clearVotingPowerFactor(&validator_addr)
-				self.clearLastActiveBlock(&validator_addr)
-				self.clearEvictionCursor(&validator_addr)
-				self.state_get_and_decrement(validator_addr[:], BlockToBytes(validator.LastUpdated))
-			} else {
-				if self.isOnFicusHardfork(block) {
-					self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &validator_addr, validator)
-				}
+		if validator.UndelegationsCount == 0 && validator.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
+			self.validators.DeleteValidator(&validator_addr)
+			self.clearVotingPowerFactor(&validator_addr)
+			self.clearLastActiveBlock(&validator_addr)
+			self.clearEvictionCursor(&validator_addr)
+			self.state_get_and_decrement(validator_addr[:], BlockToBytes(validator.LastUpdated))
+		} else {
+			if self.isOnFicusHardfork(block) {
+				self.validators.ModifyValidator(true, &validator_addr, validator)
 			}
 		}
 	}
@@ -1434,7 +1419,6 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 	// --- END EBLA MAX STAKE CHECK ---
 	validator.TotalStake.Add(validator.TotalStake, undelegation.Amount)
 
-	// validator.UndelegationsCount might be == 0 if all delegators undelegated from the validator before magnolia hardfork
 	// and validator was not yet deleted(e.g. due to unclaimed commission reward)
 	if validator.UndelegationsCount > 0 {
 		validator.UndelegationsCount--
@@ -1451,7 +1435,7 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &validator_addr, validator)
+	self.validators.ModifyValidator(true, &validator_addr, validator)
 	self.validators.ModifyValidatorRewards(&validator_addr, validator_rewards)
 	self.evm.AddLog(self.logs.MakeUndelegateCanceledLog(ctx.CallerAccount.Address(), &validator_addr, undelegation_id, undelegation.Amount))
 
@@ -1542,7 +1526,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 		}
 
 		if validator_from.TotalStake.Cmp(big.NewInt(0)) == 0 && validator_rewards_from.CommissionRewardsPool.Cmp(big.NewInt(0)) == 0 {
-			if !self.isOnMagnoliaHardfork(block) || validator_from.UndelegationsCount == 0 {
+			if validator_from.UndelegationsCount == 0 {
 				self.validators.DeleteValidator(&args.ValidatorFrom)
 				self.clearVotingPowerFactor(&args.ValidatorFrom)
 				self.clearLastActiveBlock(&args.ValidatorFrom)
@@ -1550,12 +1534,12 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 				self.state_put(&state_k, nil)
 			} else {
 				if self.isOnFicusHardfork(block) {
-					self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.ValidatorFrom, validator_from)
+					self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
 				}
 			}
 		} else {
 			self.state_put(&state_k, state)
-			self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.ValidatorFrom, validator_from)
+			self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
 			self.validators.ModifyValidatorRewards(&args.ValidatorFrom, validator_rewards_from)
 		}
 
@@ -1613,7 +1597,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.ValidatorTo, validator_to)
+	self.validators.ModifyValidator(true, &args.ValidatorTo, validator_to)
 	self.validators.ModifyValidatorRewards(&args.ValidatorTo, validator_rewards_to)
 	self.evm.AddLog(self.logs.MakeRedelegatedLog(ctx.CallerAccount.Address(), &args.ValidatorFrom, &args.ValidatorTo, args.Amount))
 	return nil
@@ -1646,7 +1630,7 @@ func (self *Contract) claimRewards(ctx vm.CallFrame, block types.BlockNum, args 
 		validator_rewards.RewardsPool = big.NewInt(0)
 		validator.LastUpdated = block
 		state.Count++
-		self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
+		self.validators.ModifyValidator(true, &args.Validator, validator)
 		self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 	}
 
@@ -1702,7 +1686,7 @@ func (self *Contract) claimCommissionRewards(ctx vm.CallFrame, block types.Block
 	validator_rewards.CommissionRewardsPool = big.NewInt(0)
 
 	if validator.TotalStake.Cmp(big.NewInt(0)) == 0 {
-		if !self.isOnMagnoliaHardfork(block) || validator.UndelegationsCount == 0 {
+		if validator.UndelegationsCount == 0 {
 			self.validators.DeleteValidator(&args.Validator)
 			self.clearVotingPowerFactor(&args.Validator)
 			self.clearLastActiveBlock(&args.Validator)
@@ -1778,7 +1762,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 	state.RewardsPer1Stake = big.NewInt(0)
 
 	// Creates validator related objects in storage
-	validator := self.validators.CreateValidator(self.isOnMagnoliaHardfork(block), owner_address, &args.Validator, args.VrfKey, block, args.Commission, args.Description, args.Endpoint)
+	validator := self.validators.CreateValidator(true, owner_address, &args.Validator, args.VrfKey, block, args.Commission, args.Description, args.Endpoint)
 	state.Count++
 	self.evm.AddLog(self.logs.MakeValidatorRegisteredLog(&args.Validator))
 
@@ -1786,7 +1770,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 		self.evm.AddLog(self.logs.MakeDelegatedLog(owner_address, &args.Validator, ctx.Value))
 		self.delegations.CreateDelegation(owner_address, &args.Validator, block, ctx.Value)
 		self.delegate_update_values(ctx, validator, 0, 10000)
-		self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
+		self.validators.ModifyValidator(true, &args.Validator, validator)
 		state.Count++
 	}
 
@@ -1862,7 +1846,7 @@ func (self *Contract) setCommission(ctx vm.CallFrame, block types.BlockNum, args
 
 	validator.Commission = args.Commission
 	validator.LastCommissionChange = block
-	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), &args.Validator, validator)
+	self.validators.ModifyValidator(true, &args.Validator, validator)
 	self.evm.AddLog(self.logs.MakeCommissionSetLog(&args.Validator, args.Commission))
 
 	return nil
@@ -2158,10 +2142,6 @@ func (self *Contract) calculateDelegatorReward(rewardPer1Stake *big.Int, stake *
 	return bigutil.Div(bigutil.Mul(rewardPer1Stake, stake), self.cfg.DPOS.ValidatorMaximumStake)
 }
 
-func (self *Contract) isOnMagnoliaHardfork(block types.BlockNum) bool {
-	return self.cfg.Hardforks.IsOnMagnoliaHardfork(block)
-}
-
 func (self *Contract) isOnPhalaenopsisHardfork(block types.BlockNum) bool {
 	return self.cfg.Hardforks.IsOnPhalaenopsisHardfork(block)
 }
@@ -2169,7 +2149,6 @@ func (self *Contract) isOnPhalaenopsisHardfork(block types.BlockNum) bool {
 func (self *Contract) isOnFicusHardfork(block types.BlockNum) bool {
 	return self.cfg.Hardforks.IsOnFicusHardfork(block)
 }
-
 
 func (self *Contract) saveTotalSupplyDb() {
 	self.storage.Put(storage.Stor_k_1(field_total_supply), self.total_supply.Bytes())
@@ -2197,7 +2176,7 @@ func (self *Contract) getVotingPowerFactor(validator *common.Address) uint64 {
 func (self *Contract) setVotingPowerFactor(validator *common.Address, factor uint64) {
 	self.storage.Put(
 		storage.Stor_k_1(field_voting_power_factor, validator[:]),
-		bin.ENC_b_endian_compact_64_1(factor + 1),
+		bin.ENC_b_endian_compact_64_1(factor+1),
 	)
 }
 
@@ -2334,6 +2313,7 @@ func Max(x, y uint64) uint64 {
 	}
 	return x
 }
+
 // undelegateInternal is a consensus-triggered internal undelegation used ONLY by forceEvictValidator.
 // It is NOT reachable from the ABI dispatch (no "case" entry in Run()), so user calldata cannot invoke it.
 // Unlike the public undelegate(), this bypasses ctx.CallerAccount ownership checks because
@@ -2379,7 +2359,7 @@ func (self *Contract) undelegateInternal(
 
 	// Persist validator state. EBLA runs Magnolia from block 0, so the first arg is always true,
 	// but we read from config for consistency with other call sites.
-	self.validators.ModifyValidator(self.isOnMagnoliaHardfork(block), validator_addr, validator)
+	self.validators.ModifyValidator(true, validator_addr, validator)
 
 	// Emit canonical Undelegated event
 	self.evm.AddLog(self.logs.MakeUndelegatedLog(delegator_addr, validator_addr, undelegation_id, amount))

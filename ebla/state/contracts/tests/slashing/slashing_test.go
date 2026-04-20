@@ -11,7 +11,6 @@ import (
 	"github.com/EBLA-network/ebla-evm/accounts/abi"
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/crypto/secp256k1"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
 	slashing "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/precompiled"
 	slashing_sol "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/solidity"
@@ -20,6 +19,7 @@ import (
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
 	"github.com/EBLA-network/ebla-evm/ebla/util/tests"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 // This strings should correspond to event signatures in ../solidity/slashing_contract_interface.sol file
@@ -59,8 +59,7 @@ var (
 		},
 		Hardforks: chain_config.HardforksConfig{
 			FixRedelegateBlockNum: 0,
-			MagnoliaHf: chain_config.MagnoliaHfConfig{
-				BlockNum: 0,
+			Slashing: chain_config.SlashingConfig{
 				JailTime: 5,
 			},
 			AspenHf: chain_config.AspenHfConfig{
@@ -291,7 +290,7 @@ func TestGetJailBlock(t *testing.T) {
 	result := test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", malicious_vote_author1), util.ErrorString(""), util.ErrorString(""))
 	result_parsed := new(uint64)
 	test.Unpack(result_parsed, "getJailBlock", result.CodeRetval)
-	tc.Assert.Equal(1+DefaultChainCfg.Hardforks.MagnoliaHf.JailTime, *result_parsed)
+	tc.Assert.Equal(1+DefaultChainCfg.Hardforks.Slashing.JailTime, *result_parsed)
 
 	// Test cumulative jail time - commit another double voting proof
 	vote_a = DefaultVote
@@ -311,7 +310,7 @@ func TestGetJailBlock(t *testing.T) {
 	result = test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", malicious_vote_author1), util.ErrorString(""), util.ErrorString(""))
 	result_parsed = new(uint64)
 	test.Unpack(result_parsed, "getJailBlock", result.CodeRetval)
-	tc.Assert.Equal(1+2*uint64(test.Chain_cfg.DPOS.DelegationDelay)+DefaultChainCfg.Hardforks.MagnoliaHf.JailTime, *result_parsed)
+	tc.Assert.Equal(1+2*uint64(test.Chain_cfg.DPOS.DelegationDelay)+DefaultChainCfg.Hardforks.Slashing.JailTime, *result_parsed)
 }
 
 func TestMakeLogsCheckTopics(t *testing.T) {
@@ -323,7 +322,7 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 
 	count := 0
 	{
-		log := logs.MakeJailedLog(&common.ZeroAddress, block, block+DefaultChainCfg.Hardforks.MagnoliaHf.JailTime, slashing.DOUBLE_VOTING)
+		log := logs.MakeJailedLog(&common.ZeroAddress, block, block+DefaultChainCfg.Hardforks.Slashing.JailTime, slashing.DOUBLE_VOTING)
 		tc.Assert.Equal(log.Topics[0], JailedEventHash)
 		count++
 	}
@@ -334,7 +333,7 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 
 func TestJailedValidatorsList(t *testing.T) {
 	cfg := DefaultChainCfg
-	cfg.Hardforks.MagnoliaHf.JailTime = 50
+	cfg.Hardforks.Slashing.JailTime = 50
 	proof_author := addr(1)
 	test_voters_count := uint64(10)
 
@@ -386,7 +385,7 @@ func TestJailedValidatorsList(t *testing.T) {
 		result := test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", proofs[i].author), util.ErrorString(""), util.ErrorString(""))
 		unjail_block := uint64(0)
 		test.Unpack(&unjail_block, "getJailBlock", result.CodeRetval)
-		expected_unjail := 1 + cfg.Hardforks.MagnoliaHf.JailTime + i*blocks_per_iteration
+		expected_unjail := 1 + cfg.Hardforks.Slashing.JailTime + i*blocks_per_iteration
 		tc.Assert.Equal(int(expected_unjail), int(unjail_block))
 
 		if first_unjail_block == 0 {
@@ -422,7 +421,7 @@ func TestJailedValidatorsList(t *testing.T) {
 
 func TestDoubleJailing(t *testing.T) {
 	cfg := DefaultChainCfg
-	cfg.Hardforks.MagnoliaHf.JailTime = 50
+	cfg.Hardforks.Slashing.JailTime = 50
 	privkey1, _ := addValidator(&cfg)
 	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()
