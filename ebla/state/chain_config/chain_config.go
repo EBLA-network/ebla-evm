@@ -31,12 +31,6 @@ type AspenHfConfig struct {
 	GeneratedRewards *big.Int // Total number of generated rewards between block 0 and AspenHf BlockNum
 }
 
-type FicusHfConfig struct {
-	BlockNum              uint64
-	PillarBlocksInterval  uint64 // [number of blocks]
-	BridgeContractAddress common.Address
-}
-
 // Leaving it here for next HF
 // type BambooRedelegation struct {
 // 	Validator common.Address
@@ -54,8 +48,6 @@ type HardforksConfig struct {
 	Slashing                     SlashingConfig
 	PhalaenopsisHfBlockNum       uint64
 	AspenHf                      AspenHfConfig
-	FicusHf                      FicusHfConfig
-	InactivityPenaltyBlock       uint64 // Block at which inactivity penalty activates (0 for EBLA genesis)
 }
 
 func (c *HardforksConfig) IsOnPhalaenopsisHardfork(block types.BlockNum) bool {
@@ -70,10 +62,6 @@ func (c *HardforksConfig) IsOnAspenHardforkPartTwo(block types.BlockNum) bool {
 	return block >= c.AspenHf.BlockNumPartTwo
 }
 
-func (c *HardforksConfig) IsOnFicusHardfork(block types.BlockNum) bool {
-	return block >= c.FicusHf.BlockNum
-}
-
 func isForked(fork_start, block_num types.BlockNum) bool {
 	if fork_start == types.BlockNumberNIL || block_num == types.BlockNumberNIL {
 		return false
@@ -85,7 +73,6 @@ func (c *HardforksConfig) Rules(num types.BlockNum) vm.Rules {
 	return vm.Rules{
 		IsAspenPartOne: isForked(c.AspenHf.BlockNumPartOne, num),
 		IsAspenPartTwo: isForked(c.AspenHf.BlockNumPartTwo, num),
-		IsFicus:        isForked(c.FicusHf.BlockNum, num),
 	}
 }
 
@@ -135,8 +122,4 @@ func (self *ChainConfig) GenesisBalancesSum() *big.Int {
 	}
 
 	return sum
-}
-
-func (c *HardforksConfig) IsOnInactivityPenaltyHardfork(block types.BlockNum) bool {
-	return block >= c.InactivityPenaltyBlock
 }

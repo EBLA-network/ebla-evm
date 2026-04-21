@@ -952,13 +952,10 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 		self.saveMintedTokensDb()
 	}
 
-	// === NEW: Epoch boundary inactivity penalty check ===
-	if self.cfg.Hardforks.IsOnInactivityPenaltyHardfork(current_block_num) {
-		if current_block_num > 0 && current_block_num%10000 == 0 {
-			self.applyInactivityPenalties(current_block_num)
-		}
+	// Epoch boundary inactivity penalty check (permanent in EBLA from block 0)
+	if current_block_num > 0 && current_block_num%10000 == 0 {
+		self.applyInactivityPenalties(current_block_num)
 	}
-	// === END NEW ===
 
 	return newMintedRewards
 }
@@ -1346,9 +1343,7 @@ func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, 
 			self.clearEvictionCursor(&validator_addr)
 			self.state_get_and_decrement(validator_addr[:], BlockToBytes(validator.LastUpdated))
 		} else {
-			if self.isOnFicusHardfork(block) {
-				self.validators.ModifyValidator(true, &validator_addr, validator)
-			}
+			self.validators.ModifyValidator(true, &validator_addr, validator)
 		}
 	}
 
@@ -1533,9 +1528,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 				self.clearEvictionCursor(&args.ValidatorFrom)
 				self.state_put(&state_k, nil)
 			} else {
-				if self.isOnFicusHardfork(block) {
-					self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
-				}
+				self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
 			}
 		} else {
 			self.state_put(&state_k, state)
@@ -2144,10 +2137,6 @@ func (self *Contract) calculateDelegatorReward(rewardPer1Stake *big.Int, stake *
 
 func (self *Contract) isOnPhalaenopsisHardfork(block types.BlockNum) bool {
 	return self.cfg.Hardforks.IsOnPhalaenopsisHardfork(block)
-}
-
-func (self *Contract) isOnFicusHardfork(block types.BlockNum) bool {
-	return self.cfg.Hardforks.IsOnFicusHardfork(block)
 }
 
 func (self *Contract) saveTotalSupplyDb() {

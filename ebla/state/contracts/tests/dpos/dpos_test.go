@@ -119,7 +119,6 @@ var (
 				MaxSupply:        new(big.Int).Mul(big.NewInt(12e+9), big.NewInt(1e+18)),
 				GeneratedRewards: big.NewInt(0),
 			},
-			InactivityPenaltyBlock: 0,
 		},
 	}
 )
@@ -148,7 +147,6 @@ func CopyDefaultChainConfig() chain_config.ChainConfig {
 	new_cfg.DPOS.BlocksPerYear = DefaultChainCfg.DPOS.BlocksPerYear
 	new_cfg.DPOS.InitialValidators = DefaultChainCfg.DPOS.InitialValidators
 	new_cfg.Hardforks = DefaultChainCfg.Hardforks
-	new_cfg.Hardforks.InactivityPenaltyBlock = DefaultChainCfg.Hardforks.InactivityPenaltyBlock
 
 	return new_cfg
 }
