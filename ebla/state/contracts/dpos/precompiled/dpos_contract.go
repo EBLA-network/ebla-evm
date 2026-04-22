@@ -10,7 +10,6 @@ import (
 
 	"github.com/EBLA-network/ebla-evm/crypto"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
-	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bigutil"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
 	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
@@ -303,23 +302,8 @@ func (self *Contract) RequiredGas(ctx vm.CallFrame, evm *vm.EVM) uint64 {
 	case "claimRewards":
 		return ClaimRewardsGas
 	case "claimAllRewards":
-		if self.cfg.Hardforks.IsOnAspenHardforkPartOne(evm.GetBlock().Number) {
-			delegations_count := uint64(self.delegations.GetDelegationsCount(ctx.CallerAccount.Address()))
-			return delegations_count * (DposBatchGetMethodsGas + ClaimRewardsGas)
-		} else {
-			// First 4 bytes is method signature !!!!
-			input := ctx.Input[4:]
-			var args dpos_sol.ClaimAllRewardsArgs
-			if err := method.Inputs.Unpack(&args, input); err != nil {
-				// args parsing will fail also during Run() so the tx wont get executed
-				return 0
-			}
-
-			delegations_count := self.batch_items_count(uint64(self.delegations.GetDelegationsCount(ctx.CallerAccount.Address())), uint64(args.Batch), ClaimAllRewardsMaxCount)
-			// delegations_count * DposBatchGetMethodsGas is the price for getting all validators from db(1:1 to getValidators gas) and
-			// delegations_count * ClaimRewardsGas is for calling claimRewards for each validator
-			return delegations_count * (DposBatchGetMethodsGas + ClaimRewardsGas)
-		}
+		delegations_count := uint64(self.delegations.GetDelegationsCount(ctx.CallerAccount.Address()))
+		return delegations_count * (DposBatchGetMethodsGas + ClaimRewardsGas)
 
 	case "getValidators":
 		// First 4 bytes is method signature !!!!
@@ -646,21 +630,7 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 		return nil, self.claimRewards(ctx, block_num, args)
 
 	case "claimAllRewards":
-		if self.cfg.Hardforks.IsOnAspenHardforkPartOne(block_num) {
-			return nil, self.claimAllRewards(ctx, block_num)
-		} else {
-			var args dpos_sol.ClaimAllRewardsArgs
-			if err = method.Inputs.Unpack(&args, input); err != nil {
-				fmt.Println("Unable to parse claimAllRewards input args: ", err)
-				return nil, err
-			}
-
-			result, err := self.claimAllRewardsPreAspenHF(ctx, block_num, args)
-			if err != nil {
-				return nil, err
-			}
-			return method.Outputs.Pack(result)
-		}
+		return nil, self.claimAllRewards(ctx, block_num)
 	case "claimCommissionRewards":
 		var args dpos_sol.ValidatorAddressArgs
 		if err = method.Inputs.Unpack(&args, input); err != nil {
@@ -804,14 +774,7 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	blockReward := new(uint256.Int)
 
 	current_block_num := self.evm.GetBlock().Number
-	// Aspen hf introduces dynamic yield curve, see https://github.com/EBLA-network/TIP/blob/main/TIP-2/TIP-2%20-%20Cap%20EBLA's%20Total%20Supply.md
-	if self.cfg.Hardforks.IsOnAspenHardforkPartTwo(current_block_num) {
-		blockReward = self.processBlockReward(current_block_num)
-	} else {
-		// Original fixed yield curve
-		blockReward.Mul(self.amount_delegated, self.yield_percentage)
-		blockReward.Div(blockReward, new(uint256.Int).Mul(uint256.NewInt(100), self.blocks_per_year))
-	}
+	blockReward = self.processBlockReward(current_block_num)
 
 	totalReward := uint256.NewInt(0)
 	votesReward := uint256.NewInt(0)
@@ -953,13 +916,8 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 
 	self.storage.AddBalance(dpos_contract_address, totalReward.ToBig())
 
-	if self.cfg.Hardforks.IsOnAspenHardforkPartTwo(current_block_num) {
-		self.total_supply.Add(self.total_supply, newMintedRewards)
-		self.saveTotalSupplyDb()
-	} else if self.cfg.Hardforks.IsOnAspenHardforkPartOne(current_block_num) {
-		self.minted_tokens.Add(self.minted_tokens, newMintedRewards)
-		self.saveMintedTokensDb()
-	}
+	self.total_supply.Add(self.total_supply, newMintedRewards)
+	self.saveTotalSupplyDb()
 
 	// Epoch boundary inactivity penalty check (permanent in EBLA from block 0)
 	if current_block_num > 0 && current_block_num%10000 == 0 {
@@ -1453,10 +1411,8 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 			return ErrSameValidator
 		}
 	}
-	if self.cfg.Hardforks.IsOnAspenHardforkPartTwo(block) {
-		if args.Amount.Cmp(big.NewInt(0)) <= 0 {
-			return ErrInvalidRedelegation
-		}
+	if args.Amount.Cmp(big.NewInt(0)) <= 0 {
+		return ErrInvalidRedelegation
 	}
 
 	validator_from := self.validators.GetValidator(&args.ValidatorFrom)
@@ -2264,21 +2220,6 @@ func BlockToBytes(number types.BlockNum) []byte {
 	big := new(big.Int)
 	big.SetUint64(number)
 	return big.Bytes()
-}
-
-func voteCount(staking_balance *big.Int, cfg *chain_config.ChainConfig, block types.BlockNum) uint64 {
-	tmp := big.NewInt(0)
-	if cfg.Hardforks.IsOnAspenHardforkPartOne(block) {
-		if staking_balance.Cmp(cfg.DPOS.ValidatorMaximumStake) >= 0 {
-			tmp.Div(cfg.DPOS.ValidatorMaximumStake, cfg.DPOS.VoteEligibilityBalanceStep)
-		}
-	}
-
-	if staking_balance.Cmp(cfg.DPOS.EligibilityBalanceThreshold) >= 0 {
-		tmp.Div(staking_balance, cfg.DPOS.VoteEligibilityBalanceStep)
-	}
-	asserts.Holds(tmp.IsUint64())
-	return tmp.Uint64()
 }
 
 // Safe add64, that panics on overflow (should never happen - misconfiguration)

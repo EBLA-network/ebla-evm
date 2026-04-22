@@ -6,15 +6,11 @@ import (
 )
 
 func (st *StateTransition) applyHFChanges() {
-	blk_n := st.BlockNumber()
-
 	if st.dpos_contract != nil {
 		st.dpos_contract.Register(st.evm.RegisterPrecompiledContract)
-		if st.chain_config.Hardforks.IsOnAspenHardforkPartOne(blk_n) {
-			acc := st.state.GetAccount(dpos.ContractAddress())
-			if acc.GetCodeSize() == 0 {
-				acc.SetCode(dpos_sol.AspenDposImplBytecode)
-			}
+		acc := st.state.GetAccount(dpos.ContractAddress())
+		if acc.GetCodeSize() == 0 {
+			acc.SetCode(dpos_sol.AspenDposImplBytecode)
 		}
 	}
 

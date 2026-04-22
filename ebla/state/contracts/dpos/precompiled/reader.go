@@ -67,8 +67,8 @@ func (r Reader) TotalEligibleVoteCount() (ret uint64) {
 }
 
 func (r Reader) GetEligibleVoteCount(addr *common.Address) (ret uint64) {
-    factor := r.getVotingPowerFactor(addr)
-    return voteCountWithFactor(r.GetStakingBalance(addr), r.cfg, r.block_n, factor)
+	factor := r.getVotingPowerFactor(addr)
+	return voteCountWithFactor(r.GetStakingBalance(addr), r.cfg, r.block_n, factor)
 }
 
 func (r Reader) TotalAmountDelegated() (ret *big.Int) {
@@ -80,13 +80,13 @@ func (r Reader) TotalAmountDelegated() (ret *big.Int) {
 }
 
 func (r Reader) IsEligible(address *common.Address) bool {
-    factor := r.getVotingPowerFactor(address)
-    if factor == 0 {
-        return false
-    }
-    effective := new(big.Int).Mul(r.GetStakingBalance(address), big.NewInt(int64(factor)))
-    effective.Div(effective, big.NewInt(10000))
-    return r.cfg.DPOS.EligibilityBalanceThreshold.Cmp(effective) <= 0
+	factor := r.getVotingPowerFactor(address)
+	if factor == 0 {
+		return false
+	}
+	effective := new(big.Int).Mul(r.GetStakingBalance(address), big.NewInt(int64(factor)))
+	effective.Div(effective, big.NewInt(10000))
+	return r.cfg.DPOS.EligibilityBalanceThreshold.Cmp(effective) <= 0
 }
 
 func (r Reader) GetStakingBalance(addr *common.Address) (ret *big.Int) {
@@ -132,7 +132,7 @@ func (r Reader) GetValidatorsVoteCounts() (ret []ValidatorVoteCount) {
 
 	for _, addr := range validators {
 		factor := r.getVotingPowerFactor(&addr)
-        ret = append(ret, ValidatorVoteCount{Address: addr, VoteCount: voteCountWithFactor(r.GetStakingBalance(&addr), r.cfg, r.block_n, factor)})
+		ret = append(ret, ValidatorVoteCount{Address: addr, VoteCount: voteCountWithFactor(r.GetStakingBalance(&addr), r.cfg, r.block_n, factor)})
 	}
 
 	return
@@ -146,11 +146,6 @@ func (r Reader) GetVrfKey(addr *common.Address) (ret []byte) {
 }
 
 func (r Reader) GetYield() uint64 {
-	// Yield is saved & updated since Aspen hardfork
-	if !r.cfg.Hardforks.IsOnAspenHardforkPartTwo(r.block_n) {
-		return 0
-	}
-
 	yield := uint64(0)
 	r.storage.Get(storage.Stor_k_1(field_yield), func(bytes []byte) {
 		rlp.MustDecodeBytes(bytes, &yield)
@@ -163,11 +158,6 @@ func (r Reader) GetYield() uint64 {
 }
 
 func (r Reader) GetTotalSupply() *big.Int {
-	// Total supply is saved & updated since Aspen hardfork
-	if !r.cfg.Hardforks.IsOnAspenHardforkPartTwo(r.block_n) {
-		return big.NewInt(0)
-	}
-
 	total_supply := uint256.NewInt(0)
 	r.storage.Get(storage.Stor_k_1(field_total_supply), func(bytes []byte) {
 		total_supply.SetBytes(bytes)
@@ -179,12 +169,12 @@ func (r Reader) GetTotalSupply() *big.Int {
 // getVotingPowerFactor reads the voting power factor from storage for the Reader.
 // Uses sentinel encoding: stored value is factor+1, 0 means not set (returns 10000).
 func (r Reader) getVotingPowerFactor(addr *common.Address) uint64 {
-    var stored uint64
-    r.storage.Get(storage.Stor_k_1(field_voting_power_factor, addr[:]), func(bytes []byte) {
-        stored = bin.DEC_b_endian_compact_64(bytes)
-    })
-    if stored == 0 {
-        return 10000
-    }
-    return stored - 1
+	var stored uint64
+	r.storage.Get(storage.Stor_k_1(field_voting_power_factor, addr[:]), func(bytes []byte) {
+		stored = bin.DEC_b_endian_compact_64(bytes)
+	})
+	if stored == 0 {
+		return 10000
+	}
+	return stored - 1
 }

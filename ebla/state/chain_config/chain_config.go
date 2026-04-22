@@ -24,11 +24,14 @@ type SlashingConfig struct {
 	JailTime uint64 // number of blocks a double-voter stays jailed
 }
 
+// AspenHfConfig holds permanent supply-cap / yield-curve parameters in EBLA.
+// The original Taraxa "Aspen hardfork" block-number gates (part 1 = minted
+// tokens DB, part 2 = dynamic yield curve) were removed in Phase 14.3 —
+// both behaviors are now unconditional from block 0. Only the supply
+// invariants remain.
 type AspenHfConfig struct {
-	BlockNumPartOne  uint64 // part 1 just starts to save minted tokens (rewards) in db
-	BlockNumPartTwo  uint64 // part 2 implements new dynamic yield curve
-	MaxSupply        *big.Int
-	GeneratedRewards *big.Int // Total number of generated rewards between block 0 and AspenHf BlockNum
+	MaxSupply        *big.Int // 12 billion EBLA hard cap
+	GeneratedRewards *big.Int // genesis-seed amount counted against MaxSupply
 }
 
 // Leaving it here for next HF
@@ -49,14 +52,6 @@ type HardforksConfig struct {
 	AspenHf                      AspenHfConfig
 }
 
-func (c *HardforksConfig) IsOnAspenHardforkPartOne(block types.BlockNum) bool {
-	return block >= c.AspenHf.BlockNumPartOne
-}
-
-func (c *HardforksConfig) IsOnAspenHardforkPartTwo(block types.BlockNum) bool {
-	return block >= c.AspenHf.BlockNumPartTwo
-}
-
 func isForked(fork_start, block_num types.BlockNum) bool {
 	if fork_start == types.BlockNumberNIL || block_num == types.BlockNumberNIL {
 		return false
@@ -65,10 +60,7 @@ func isForked(fork_start, block_num types.BlockNum) bool {
 }
 
 func (c *HardforksConfig) Rules(num types.BlockNum) vm.Rules {
-	return vm.Rules{
-		IsAspenPartOne: isForked(c.AspenHf.BlockNumPartOne, num),
-		IsAspenPartTwo: isForked(c.AspenHf.BlockNumPartTwo, num),
-	}
+	return vm.Rules{}
 }
 
 type GenesisValidator struct {

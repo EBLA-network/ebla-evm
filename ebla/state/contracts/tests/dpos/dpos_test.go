@@ -113,8 +113,6 @@ var (
 				JailTime: 5,
 			},
 			AspenHf: chain_config.AspenHfConfig{
-				BlockNumPartOne: 0,
-				BlockNumPartTwo: 0,
 				// Max token supply is 12 Billion EBLA -> 12e+9(12 billion) * 1e+18(ebla precision)
 				MaxSupply:        new(big.Int).Mul(big.NewInt(12e+9), big.NewInt(1e+18)),
 				GeneratedRewards: big.NewInt(0),
@@ -590,8 +588,6 @@ func TestAspenHf(t *testing.T) {
 	// EBLA: All hardforks active from block 0. This test verifies the dynamic
 	// yield curve (epoch-based decay) produces correct rewards from genesis.
 	cfg := CopyDefaultChainConfig()
-	cfg.Hardforks.AspenHf.BlockNumPartOne = 0
-	cfg.Hardforks.AspenHf.BlockNumPartTwo = 0
 	cfg.Hardforks.AspenHf.GeneratedRewards = big.NewInt(0)
 
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)
@@ -936,7 +932,6 @@ func TestRewardsAndCommission(t *testing.T) {
 func TestClaimAllRewards(t *testing.T) {
 	cfg := DefaultChainCfg
 	cfg.DPOS.MinimumDeposit = big.NewInt(0)
-	cfg.Hardforks.AspenHf.BlockNumPartTwo = 1000
 
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)
 
@@ -2007,7 +2002,6 @@ func TestRedelegateHF(t *testing.T) {
 	delegator5_stake := DefaultMinimumDeposit
 
 	cfg := CopyDefaultChainConfig()
-	cfg.Hardforks.AspenHf.BlockNumPartTwo = 1000
 	cfg.Hardforks.FixRedelegateBlockNum = 12
 	cfg.Hardforks.Redelegations = append(cfg.Hardforks.Redelegations, chain_config.Redelegation{Validator: validator2_addr, Delegator: delegator3_addr, Amount: DefaultMinimumDeposit})
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)

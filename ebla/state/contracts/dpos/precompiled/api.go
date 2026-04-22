@@ -52,8 +52,6 @@ func (api *API) Init(cfg chain_config.ChainConfig) *API {
 	//MaxBlockAuthorReward is in %
 	asserts.Holds(cfg.DPOS.MaxBlockAuthorReward <= 100)
 
-	asserts.Holds(cfg.Hardforks.AspenHf.BlockNumPartTwo >= cfg.Hardforks.AspenHf.BlockNumPartOne)
-
 	// total supply mus be <= max supply
 	total_supply := cfg.GenesisBalancesSum()
 	total_supply.Add(total_supply, cfg.Hardforks.AspenHf.GeneratedRewards)
