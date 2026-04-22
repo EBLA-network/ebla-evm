@@ -46,12 +46,7 @@ type HardforksConfig struct {
 	Redelegations                []Redelegation
 	RewardsDistributionFrequency map[uint64]uint32
 	Slashing                     SlashingConfig
-	PhalaenopsisHfBlockNum       uint64
 	AspenHf                      AspenHfConfig
-}
-
-func (c *HardforksConfig) IsOnPhalaenopsisHardfork(block types.BlockNum) bool {
-	return block >= c.PhalaenopsisHfBlockNum
 }
 
 func (c *HardforksConfig) IsOnAspenHardforkPartOne(block types.BlockNum) bool {

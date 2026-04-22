@@ -2272,28 +2272,30 @@ func TestRedelegateHF(t *testing.T) {
 	}
 }
 
-func TestPhalaenopsisHF(t *testing.T) {
+// TestBurnIntoDPoSContract verifies that the burn() method (selector 0x44df8e70)
+// is callable from block 0 without any hardfork gate, moves the sender's EBLA into
+// the DPoS contract's native balance, and returns no error.
+//
+// Phase 14.2 removed the Phalaenopsis hardfork gate. This test is the permanent
+// behavioral regression guard for the EBLA burn mechanism.
+func TestBurnIntoDPoSContract(t *testing.T) {
 	cfg := CopyDefaultChainConfig()
-	cfg.Hardforks.PhalaenopsisHfBlockNum = 3
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)
 	defer test.End()
 
 	testingAccount := addr(1)
 	testingAccountBalance := test.GetBalance(&testingAccount)
 	burnAmount := big.NewInt(1000000)
-	test.ExecuteAndCheck(testingAccount, big.NewInt(1000000), dpos.TransferIntoDPoSContractMethod, util.ErrorString("no method with id: 0x44df8e70"), util.ErrorString(""))
-	tc.Assert.Equal(testingAccountBalance, test.GetBalance(&testingAccount))
 
-	test.AdvanceBlock(nil, nil)
-	test.AdvanceBlock(nil, nil)
-
+	// At block 0 the burn() method must succeed immediately — no gate.
 	dposBalanceBefore := test.GetBalance(dpos.ContractAddress())
-	test.ExecuteAndCheck(testingAccount, big.NewInt(1000000), dpos.TransferIntoDPoSContractMethod, util.ErrorString(""), util.ErrorString(""))
+	test.ExecuteAndCheck(testingAccount, burnAmount, dpos.TransferIntoDPoSContractMethod, util.ErrorString(""), util.ErrorString(""))
+
+	// Sender's balance should have decreased by burnAmount.
 	tc.Assert.Equal(testingAccountBalance.Sub(testingAccountBalance, burnAmount), test.GetBalance(&testingAccount))
+
+	// DPoS contract's native balance should have grown by burnAmount.
 	tc.Assert.Equal(dposBalanceBefore.Add(dposBalanceBefore, burnAmount), test.GetBalance(dpos.ContractAddress()))
-
-	// totalBalance := bigutil.Add(total_stake, reward)
-
 }
 
 func TestNonPayableMethods(t *testing.T) {

@@ -66,6 +66,21 @@ const (
 	TransferIntoDPoSContractGas uint64 = 1000
 )
 
+// TransferIntoDPoSContractMethod is the 4-byte EVM method selector for the
+// Solidity function signature burn() — specifically keccak256("burn()")[:4].
+//
+// Sending EBLA to the DPoS precompile address 0x...FE with this 4-byte input
+// causes the EBLA to enter the contract's native balance without being
+// attributed to any validator's stake or rewards pool. The funds become
+// effectively burned: no code path in this precompile withdraws from the
+// native balance except through validator/delegator pool accounting, which
+// never references these funds.
+//
+// This is an EBLA-permanent feature, active from block 0. The Phalaenopsis
+// hardfork gate was removed in Phase 14.2.
+//
+// Selector reservation: no current DPoS method has this selector. Any future
+// DPoS method MUST verify its selector != 0x44df8e70 before landing.
 var TransferIntoDPoSContractMethod []byte = common.Hex2Bytes("44df8e70")
 
 // Contract methods error return values
@@ -217,14 +232,8 @@ func (self *Contract) Register(registry func(*common.Address, vm.PrecompiledCont
 	registry(&defensive_copy, self)
 }
 
-func (self *Contract) IsTransferIntoDPoSContract(input []byte, blockNum types.BlockNum) bool {
-	if !bytes.Equal(input, TransferIntoDPoSContractMethod) {
-		return false
-	}
-	if !self.isOnPhalaenopsisHardfork(blockNum) {
-		return false
-	}
-	return true
+func (self *Contract) IsTransferIntoDPoSContract(input []byte) bool {
+	return bytes.Equal(input, TransferIntoDPoSContractMethod)
 }
 
 func isPayableMethod(method string) bool {
@@ -249,7 +258,7 @@ func (self *Contract) RequiredGas(ctx vm.CallFrame, evm *vm.EVM) uint64 {
 
 	method, err := self.Abi.MethodById(ctx.Input)
 	if err != nil {
-		if self.IsTransferIntoDPoSContract(ctx.Input, evm.GetBlock().Number) {
+		if self.IsTransferIntoDPoSContract(ctx.Input) {
 			return TransferIntoDPoSContractGas
 		}
 		return 0
@@ -565,7 +574,7 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 
 	method, err := self.Abi.MethodById(ctx.Input)
 	if err != nil {
-		if self.IsTransferIntoDPoSContract(ctx.Input, block_num) {
+		if self.IsTransferIntoDPoSContract(ctx.Input) {
 			return nil, nil
 		}
 		return nil, err
@@ -1686,9 +1695,7 @@ func (self *Contract) claimCommissionRewards(ctx vm.CallFrame, block types.Block
 			self.clearEvictionCursor(&args.Validator)
 			self.state_get_and_decrement(args.Validator[:], BlockToBytes(validator.LastUpdated))
 		} else {
-			if self.isOnPhalaenopsisHardfork(block) {
-				self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
-			}
+			self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 		}
 	} else {
 		self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
@@ -2133,10 +2140,6 @@ func (self *Contract) calculateRewardPer1Stake(rewardsPool *big.Int, stake *big.
 
 func (self *Contract) calculateDelegatorReward(rewardPer1Stake *big.Int, stake *big.Int) *big.Int {
 	return bigutil.Div(bigutil.Mul(rewardPer1Stake, stake), self.cfg.DPOS.ValidatorMaximumStake)
-}
-
-func (self *Contract) isOnPhalaenopsisHardfork(block types.BlockNum) bool {
-	return self.cfg.Hardforks.IsOnPhalaenopsisHardfork(block)
 }
 
 func (self *Contract) saveTotalSupplyDb() {
