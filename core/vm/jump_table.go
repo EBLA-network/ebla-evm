@@ -52,12 +52,13 @@ type operation struct {
 }
 
 var (
-	ficusInstructionSet        = newFicusInstructionSet()
-	californicumInstructionSet = newCalifornicumInstructionSet()
+	eblaInstructionSet = newEblaInstructionSet()
 )
 
-// Example of new instruction after HF
-func newFicusInstructionSet() InstructionSet {
+// newEblaInstructionSet returns the EBLA EVM instruction set.
+// Base: Californicum (post-London Ethereum opcodes).
+// Additions: EIP-5656 MCOPY (opcode 0x5e) - required for Solidity 0.8.24+.
+func newEblaInstructionSet() InstructionSet {
 	instructionSet := newCalifornicumInstructionSet()
 	enable5656(&instructionSet) // EIP-5656 (MCOPY opcode)
 	return instructionSet
