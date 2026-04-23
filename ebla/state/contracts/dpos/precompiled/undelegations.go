@@ -10,8 +10,9 @@ import (
 	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
-
-// Post cornus hardfork - with undelegation Id. Ids are used to support multiple undelegations at the same time
+// Undelegation represents a pending unlock. Each has a unique Id
+// (per delegator address) to support multiple concurrent undelegations
+// from the same delegator to the same validator.
 type Undelegation struct {
 	Amount *big.Int
 	Block  types.BlockNum
@@ -31,7 +32,7 @@ type DelegatorUndelegations struct {
 type Undelegations struct {
 	storage *contract_storage.StorageWrapper
 
-	undelegations_field                            []byte
+	undelegations_field                         []byte
 	delegator_undelegations_field               []byte
 	delegator_undelegations_ids_field           []byte
 	delegator_undelegations_last_uniqe_id_field []byte
@@ -48,7 +49,7 @@ func (self *Undelegations) Init(stor *contract_storage.StorageWrapper, prefix []
 }
 
 // Returns true if for given values there is undelegation in queue
-func (self *Undelegations) UndelegationExists(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) bool { 	
+func (self *Undelegations) UndelegationExists(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) bool {
 	return self.undelegationExists(delegator_address, validator_address, undelegation_id)
 }
 
@@ -59,7 +60,7 @@ func (self *Undelegations) undelegationExists(delegator_address *common.Address,
 
 // NEW — returns the full Undelegation object (replaces GetUndelegationBaseObject)
 func (self *Undelegations) GetUndelegationBaseObject(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) *Undelegation {
-    return self.GetUndelegation(delegator_address, validator_address, undelegation_id)
+	return self.GetUndelegation(delegator_address, validator_address, undelegation_id)
 }
 
 func (self *Undelegations) GetUndelegation(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) (undelegation *Undelegation) {
@@ -85,7 +86,6 @@ func (self *Undelegations) GetUndelegationsCount(delegator_address *common.Addre
 
 	return count
 }
-
 
 func (self *Undelegations) CreateUndelegation(delegator_address *common.Address, validator_address *common.Address, block types.BlockNum, amount *big.Int) uint64 {
 	undelegation := new(Undelegation)
@@ -119,7 +119,7 @@ func (self *Undelegations) genUniqueId(delegator_address *common.Address) uint64
 
 // Removes undelegation object from storage
 func (self *Undelegations) RemoveUndelegation(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) {
-		self.removeUndelegation(delegator_address, validator_address, undelegation_id)
+	self.removeUndelegation(delegator_address, validator_address, undelegation_id)
 }
 
 func (self *Undelegations) removeUndelegation(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) {
@@ -137,7 +137,6 @@ func (self *Undelegations) saveUndelegationObject(key *common.Hash, undelegation
 func (self *Undelegations) removeUndelegationObject(key *common.Hash) {
 	self.storage.Put(key, nil)
 }
-
 
 // New EBLA - Returns validator by idx, from which is delegator <delegator_address> currently undelegating v2
 func (self *Undelegations) GetUndelegationsValidator(delegator_address *common.Address, validator_idx uint32) (*common.Address, bool) {
@@ -176,6 +175,6 @@ func (self *Undelegations) GetUndelegationsMaps(delegator_address *common.Addres
 
 // Return key to storage where undelegations V2 is stored
 func (self *Undelegations) genUndelegationKey(delegator_address *common.Address, validator_address *common.Address, undelegation_id uint64) *common.Hash {
-	// Post-cornus hf undelegation key is created from delegator address, validator address & and undelegation id
+	// Undelegation key is created from delegator address, validator address, and undelegation id
 	return contract_storage.Stor_k_1(self.undelegations_field, delegator_address[:], validator_address[:], contract_storage.Uint64ToBytes(undelegation_id))
 }
