@@ -88,7 +88,6 @@ type GetHashFunc = func(types.BlockNum) *big.Int
 type Rules struct {
 	IsAspenPartOne bool
 	IsAspenPartTwo bool
-	IsFicus        bool
 }
 
 type Block struct {
@@ -157,16 +156,9 @@ func (self *EVM) SetBlock(blk *Block, rules Rules) (rules_changed bool) {
 	} else {
 		self.rules_initialized = true
 	}
-	switch {
-	case rules.IsFicus:
-		self.precompiles = PrecompiledContractsFicus
-		self.instruction_set = ficusInstructionSet
-		self.gas_table = GasTableCalifornicum
-	default:
-		self.precompiles = PrecompiledContractsCalifornicum
-		self.instruction_set = californicumInstructionSet
-		self.gas_table = GasTableCalifornicum
-	}
+	self.precompiles = PrecompiledContractsFicus
+	self.instruction_set = ficusInstructionSet
+	self.gas_table = GasTableCalifornicum
 	self.rules = rules
 	return true
 }
