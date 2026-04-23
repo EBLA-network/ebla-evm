@@ -41,7 +41,7 @@ type precompiledFailureTest struct {
 	Name          string
 }
 
-var allPrecompiles = PrecompiledContractsFicus
+var allPrecompiles = PrecompiledContractsEbla
 
 // EIP-152 test vectors
 var blake2FMalformedinputTests = []precompiledFailureTest{

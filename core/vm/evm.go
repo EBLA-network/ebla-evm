@@ -156,7 +156,7 @@ func (self *EVM) SetBlock(blk *Block, rules Rules) (rules_changed bool) {
 	} else {
 		self.rules_initialized = true
 	}
-	self.precompiles = PrecompiledContractsFicus
+	self.precompiles = PrecompiledContractsEbla
 	self.instruction_set = ficusInstructionSet
 	self.gas_table = GasTableCalifornicum
 	self.rules = rules

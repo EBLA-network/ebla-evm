@@ -84,7 +84,7 @@ var PrecompiledContractsCalifornicum = Precompiles{
 	&bn256Pairing{},   // Position 8, address 0x08
 }
 
-var PrecompiledContractsFicus = Precompiles{
+var PrecompiledContractsEbla = Precompiles{
 	&ecrecover{},          // Position 1, address 0x01
 	&sha256hash{},         // Position 2, address 0x02
 	&ripemd160hash{},      // Position 3, address 0x03
