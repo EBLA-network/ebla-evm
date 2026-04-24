@@ -58,7 +58,6 @@ var (
 			YieldPercentage:             7,
 		},
 		Hardforks: chain_config.HardforksConfig{
-			FixRedelegateBlockNum: 0,
 			Slashing: chain_config.SlashingConfig{
 				JailTime: 5,
 			},

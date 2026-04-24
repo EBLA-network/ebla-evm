@@ -10,12 +10,6 @@ import (
 	"github.com/EBLA-network/ebla-evm/params"
 )
 
-type Redelegation struct {
-	Validator common.Address
-	Delegator common.Address
-	Amount    *big.Int
-}
-
 // SlashingConfig contains slashing/jailing parameters.
 // Originally introduced by Taraxa's Magnolia hardfork; features are permanent in EBLA
 // from block 0, so the hardfork gate has been removed. Only the runtime JailTime
@@ -39,14 +33,8 @@ type AspenHfConfig struct {
 // 	Validator common.Address
 // 	Amount    *big.Int
 // }
-// type BambooHfConfig struct {
-// 	BlockNum      uint64
-// 	Redelegations []BambooRedelegation
-// }
 
 type HardforksConfig struct {
-	FixRedelegateBlockNum        uint64
-	Redelegations                []Redelegation
 	RewardsDistributionFrequency map[uint64]uint32
 	Slashing                     SlashingConfig
 	AspenHf                      AspenHfConfig

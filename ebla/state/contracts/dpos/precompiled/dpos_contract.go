@@ -97,7 +97,6 @@ var (
 	ErrBrokenState                  = util.ErrorString("Fatal error state is broken")
 	ErrValidatorsMaxStakeExceeded   = util.ErrorString("Validator's max stake exceeded")
 	ErrInsufficientDelegation       = util.ErrorString("Insufficient delegation")
-	ErrCallIsNotToplevel            = util.ErrorString("only top-level calls are allowed")
 	ErrWrongProof                   = util.ErrorString("Wrong proof, validator address could not be recovered")
 	ErrWrongOwnerAcc                = util.ErrorString("This account is not owner of specified validator")
 	ErrWrongVrfKey                  = util.ErrorString("Wrong vrf key specified in validator arguments")
@@ -499,11 +498,6 @@ func (self *Contract) EndBlockCall(block_num uint64) {
 		self.amount_delegated_orig = self.amount_delegated.Clone()
 	}
 
-	// Apply HFs
-	if block_num == self.cfg.Hardforks.FixRedelegateBlockNum {
-		self.fixRedelegateBlockNumFunc(block_num)
-	}
-
 	// Keeping it here for next HF
 	// if block_num == self.cfg.Hardforks.BambooHf.BlockNum {
 	// 	self.bambooHFRedelegation(block_num)
@@ -549,11 +543,6 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 
 	block_num := evm.GetBlock().Number
 
-	if self.cfg.Hardforks.FixRedelegateBlockNum > block_num {
-		if evm.GetDepth() != 0 {
-			return nil, ErrCallIsNotToplevel
-		}
-	}
 	self.lazy_init()
 
 	method, err := self.Abi.MethodById(ctx.Input)
@@ -1406,10 +1395,8 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 
 // Moves delegated tokens from one delegator to another
 func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dpos_sol.RedelegateArgs) error {
-	if self.cfg.Hardforks.FixRedelegateBlockNum < block {
-		if args.ValidatorFrom == args.ValidatorTo {
-			return ErrSameValidator
-		}
+	if args.ValidatorFrom == args.ValidatorTo {
+		return ErrSameValidator
 	}
 	if args.Amount.Cmp(big.NewInt(0)) <= 0 {
 		return ErrInvalidRedelegation
