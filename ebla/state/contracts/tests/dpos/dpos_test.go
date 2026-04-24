@@ -81,12 +81,12 @@ type DposTest struct {
 type GenesisBalances = map[common.Address]*big.Int
 
 var (
-	TaraPrecision                      = big.NewInt(1e+18)
-	DefaultBalance                     = bigutil.Mul(big.NewInt(2050000000), TaraPrecision)
-	DefaultEligibilityBalanceThreshold = bigutil.Mul(big.NewInt(5000), TaraPrecision)
-	DefaultVoteEligibilityBalanceStep  = bigutil.Mul(big.NewInt(1000), TaraPrecision)
-	DefaultValidatorMaximumStake       = bigutil.Mul(big.NewInt(10000000), TaraPrecision)
-	DefaultMinimumDeposit              = bigutil.Mul(big.NewInt(100), TaraPrecision)
+	EblaPrecision                      = big.NewInt(1e+18)
+	DefaultBalance                     = bigutil.Mul(big.NewInt(2050000000), EblaPrecision)
+	DefaultEligibilityBalanceThreshold = bigutil.Mul(big.NewInt(5000), EblaPrecision)
+	DefaultVoteEligibilityBalanceStep  = bigutil.Mul(big.NewInt(1000), EblaPrecision)
+	DefaultValidatorMaximumStake       = bigutil.Mul(big.NewInt(10000000), EblaPrecision)
+	DefaultMinimumDeposit              = bigutil.Mul(big.NewInt(100), EblaPrecision)
 	DefaultVrfKey                      = common.RightPadBytes([]byte("0x0"), 32)
 
 	DefaultChainCfg = chain_config.ChainConfig{
@@ -246,7 +246,7 @@ func TestDelegateMinMax(t *testing.T) {
 	_, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, CopyDefaultChainConfig())
 	defer test.End()
 
-	delegation := bigutil.Mul(big.NewInt(5000000), TaraPrecision)
+	delegation := bigutil.Mul(big.NewInt(5000000), EblaPrecision)
 
 	val_addr, proof := generateAddrAndProof()
 	test.ExecuteAndCheck(addr(1), DefaultMinimumDeposit, test.Pack("registerValidator", val_addr, proof, DefaultVrfKey, uint16(1000), "test", "test"), util.ErrorString(""), util.ErrorString(""))
@@ -331,7 +331,7 @@ func TestRedelegateMinMax(t *testing.T) {
 
 	init_stake := bigutil.Mul(DefaultMinimumDeposit, big.NewInt(2))
 
-	delegation := bigutil.Mul(big.NewInt(5000000), TaraPrecision)
+	delegation := bigutil.Mul(big.NewInt(5000000), EblaPrecision)
 
 	test.ExecuteAndCheck(validator1_owner, init_stake, test.Pack("registerValidator", validator1_addr, validator1_proof, DefaultVrfKey, uint16(1000), "test", "test"), util.ErrorString(""), util.ErrorString(""))
 	test.ExecuteAndCheck(validator2_owner, init_stake, test.Pack("registerValidator", validator2_addr, validator2_proof, DefaultVrfKey, uint16(1000), "test", "test"), util.ErrorString(""), util.ErrorString(""))
@@ -608,7 +608,7 @@ func TestAspenHf(t *testing.T) {
 	total_stake := delegator1_stake
 
 	// Rewards statistics
-	trxFee := bigutil.Div(TaraPrecision, big.NewInt(1000)) //  0.001 EBLA
+	trxFee := bigutil.Div(EblaPrecision, big.NewInt(1000)) //  0.001 EBLA
 	tmp_rewards_stats := NewRewardsStats(&validator1_addr)
 
 	validator1_stats := rewards_stats.ValidatorStats{}
@@ -665,7 +665,7 @@ func TestRewardsAndCommission(t *testing.T) {
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)
 	defer test.End()
 
-	trxFee := bigutil.Div(TaraPrecision, big.NewInt(1000)) //  0.001 EBLA
+	trxFee := bigutil.Div(EblaPrecision, big.NewInt(1000)) //  0.001 EBLA
 
 	validator1_addr, validator1_proof := generateAddrAndProof()
 	validator1_owner := addr(1)
@@ -1107,7 +1107,7 @@ func TestGetValidators(t *testing.T) {
 
 	// Set some balance to validators
 	cfg := DefaultChainCfg
-	validator_balance := bigutil.Mul(big.NewInt(100000000), TaraPrecision)
+	validator_balance := bigutil.Mul(big.NewInt(100000000), EblaPrecision)
 	for _, validator := range gen_validators {
 		cfg.GenesisBalances[validator.owner] = validator_balance
 	}
@@ -1190,7 +1190,7 @@ func TestGetValidatorsFor(t *testing.T) {
 
 	// Set some balance to validators
 	cfg := DefaultChainCfg
-	validator_balance := bigutil.Mul(big.NewInt(100000000), TaraPrecision)
+	validator_balance := bigutil.Mul(big.NewInt(100000000), EblaPrecision)
 	for _, validator := range gen_validators {
 		cfg.GenesisBalances[validator.owner] = validator_balance
 	}
@@ -1262,7 +1262,7 @@ func TestGetTotalDelegation(t *testing.T) {
 
 	// Set some balance to validators
 	cfg := DefaultChainCfg
-	validator_balance := bigutil.Mul(big.NewInt(100000000), TaraPrecision)
+	validator_balance := bigutil.Mul(big.NewInt(100000000), EblaPrecision)
 	for _, validator := range gen_validators {
 		cfg.GenesisBalances[validator.owner] = validator_balance
 	}
@@ -1318,7 +1318,7 @@ func TestGetDelegations(t *testing.T) {
 
 	// Set some balance to validators
 	cfg := DefaultChainCfg
-	validator_balance := bigutil.Mul(big.NewInt(100000000), TaraPrecision)
+	validator_balance := bigutil.Mul(big.NewInt(100000000), EblaPrecision)
 	for _, validator := range gen_validators {
 		cfg.GenesisBalances[validator.owner] = validator_balance
 	}
@@ -1412,7 +1412,7 @@ func TestGetUndelegations(t *testing.T) {
 
 	// Set some balance to validators
 	cfg := DefaultChainCfg
-	validator_balance := bigutil.Mul(big.NewInt(100000000), TaraPrecision)
+	validator_balance := bigutil.Mul(big.NewInt(100000000), EblaPrecision)
 	for _, validator := range gen_validators {
 		cfg.GenesisBalances[validator.owner] = validator_balance
 	}
