@@ -128,7 +128,7 @@ func (self *Validators) GetValidatorsCount() uint32 {
 	return self.validators_list.GetCount()
 }
 
-func (self *Validators) CreateValidator(extended_validator bool, owner_address *common.Address, validator_address *common.Address, vrf_key []byte, block types.BlockNum, commission uint16, description string, endpoint string) (validator *Validator) {
+func (self *Validators) CreateValidator(owner_address *common.Address, validator_address *common.Address, vrf_key []byte, block types.BlockNum, commission uint16, description string, endpoint string) (validator *Validator) {
 	// Creates Validator object in storage
 	validator = new(Validator)
 	validator.ValidatorV1 = new(ValidatorV1)
@@ -137,12 +137,7 @@ func (self *Validators) CreateValidator(extended_validator bool, owner_address *
 	validator.LastCommissionChange = block
 	validator.LastUpdated = block
 	validator.UndelegationsCount = 0
-
-	if extended_validator {
-		Save(self, validator_address, validator)
-	} else {
-		Save(self, validator_address, validator.ValidatorV1)
-	}
+	Save(self, validator_address, validator)
 
 	// Creates ValidatorInfo object in storage
 	validator_info := new(ValidatorInfo)
@@ -210,12 +205,8 @@ func (self *Validators) GetValidator(validator_address *common.Address) (validat
 	return
 }
 
-func (self *Validators) ModifyValidator(extended_validator bool, validator_address *common.Address, validator *Validator) {
-	if extended_validator {
-		Modify(self, validator_address, validator)
-	} else {
-		Modify(self, validator_address, validator.ValidatorV1)
-	}
+func (self *Validators) ModifyValidator(validator_address *common.Address, validator *Validator) {
+	Modify(self, validator_address, validator)
 }
 
 func (self *Validators) GetValidatorInfo(validator_address *common.Address) (validator_info *ValidatorInfo) {

@@ -1732,11 +1732,11 @@ func TestValidatorsClass(t *testing.T) {
 	validator2_owner := addr(1)
 
 	// Checks CreateValidator & CheckValidatorOwner
-	validators.CreateValidator(true, &validator1_owner, &validator1_addr, DefaultVrfKey, 0, 1, "validator1_description", "validator1_endpoint")
+	validators.CreateValidator(&validator1_owner, &validator1_addr, DefaultVrfKey, 0, 1, "validator1_description", "validator1_endpoint")
 	validators.CheckValidatorOwner(&validator1_owner, &validator1_addr)
 	tc.Assert.Equal(uint32(1), validators.GetValidatorsCount())
 
-	validators.CreateValidator(true, &validator2_owner, &validator2_addr, DefaultVrfKey, 0, 2, "validator2_description", "validator2_endpoint")
+	validators.CreateValidator(&validator2_owner, &validator2_addr, DefaultVrfKey, 0, 2, "validator2_description", "validator2_endpoint")
 	validators.CheckValidatorOwner(&validator2_owner, &validator2_addr)
 	tc.Assert.Equal(uint32(2), validators.GetValidatorsCount())
 	{
@@ -1751,7 +1751,7 @@ func TestValidatorsClass(t *testing.T) {
 		validator1.Commission = 1100
 		validator1_info.Description = "validator1_description_modified"
 		validator1_info.Endpoint = "validator1_endpoint_modified"
-		validators.ModifyValidator(true, &validator1_addr, validator1)
+		validators.ModifyValidator(&validator1_addr, validator1)
 		validators.ModifyValidatorInfo(&validator1_addr, validator1_info)
 	}
 
@@ -1776,7 +1776,7 @@ func TestValidatorsClass(t *testing.T) {
 	tc.Assert.Equal(uint32(1), validators.GetValidatorsCount())
 
 	validator3_addr := addr(3)
-	tc.Assert.PanicsWithValue("Modify: non existent validator", func() { validators.ModifyValidator(true, &validator3_addr, validator1) })
+	tc.Assert.PanicsWithValue("Modify: non existent validator", func() { validators.ModifyValidator(&validator3_addr, validator1) })
 	tc.Assert.PanicsWithValue("Modify: non existent validator", func() { validators.ModifyValidatorInfo(&validator3_addr, validator1_info) })
 }
 

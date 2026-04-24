@@ -1178,7 +1178,7 @@ func (self *Contract) delegate(ctx vm.CallFrame, block types.BlockNum, args dpos
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(true, &args.Validator, validator)
+	self.validators.ModifyValidator(&args.Validator, validator)
 	self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 	self.evm.AddLog(self.logs.MakeDelegatedLog(ctx.CallerAccount.Address(), &args.Validator, ctx.Value))
 
@@ -1258,7 +1258,7 @@ func (self *Contract) undelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 	}
 
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(true, &args.Validator, validator)
+	self.validators.ModifyValidator(&args.Validator, validator)
 	self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 
 	delegationLockingPeriod := uint64(self.cfg.DPOS.DelegationLockingPeriod)
@@ -1299,7 +1299,7 @@ func (self *Contract) confirmUndelegate(ctx vm.CallFrame, block types.BlockNum, 
 			self.clearEvictionCursor(&validator_addr)
 			self.state_get_and_decrement(validator_addr[:], BlockToBytes(validator.LastUpdated))
 		} else {
-			self.validators.ModifyValidator(true, &validator_addr, validator)
+			self.validators.ModifyValidator(&validator_addr, validator)
 		}
 	}
 
@@ -1386,7 +1386,7 @@ func (self *Contract) cancelUndelegate(ctx vm.CallFrame, block types.BlockNum, v
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(true, &validator_addr, validator)
+	self.validators.ModifyValidator(&validator_addr, validator)
 	self.validators.ModifyValidatorRewards(&validator_addr, validator_rewards)
 	self.evm.AddLog(self.logs.MakeUndelegateCanceledLog(ctx.CallerAccount.Address(), &validator_addr, undelegation_id, undelegation.Amount))
 
@@ -1480,11 +1480,11 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 				self.clearEvictionCursor(&args.ValidatorFrom)
 				self.state_put(&state_k, nil)
 			} else {
-				self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
+				self.validators.ModifyValidator(&args.ValidatorFrom, validator_from)
 			}
 		} else {
 			self.state_put(&state_k, state)
-			self.validators.ModifyValidator(true, &args.ValidatorFrom, validator_from)
+			self.validators.ModifyValidator(&args.ValidatorFrom, validator_from)
 			self.validators.ModifyValidatorRewards(&args.ValidatorFrom, validator_rewards_from)
 		}
 
@@ -1542,7 +1542,7 @@ func (self *Contract) redelegate(ctx vm.CallFrame, block types.BlockNum, args dp
 
 	state.Count++
 	self.state_put(&state_k, state)
-	self.validators.ModifyValidator(true, &args.ValidatorTo, validator_to)
+	self.validators.ModifyValidator(&args.ValidatorTo, validator_to)
 	self.validators.ModifyValidatorRewards(&args.ValidatorTo, validator_rewards_to)
 	self.evm.AddLog(self.logs.MakeRedelegatedLog(ctx.CallerAccount.Address(), &args.ValidatorFrom, &args.ValidatorTo, args.Amount))
 	return nil
@@ -1575,7 +1575,7 @@ func (self *Contract) claimRewards(ctx vm.CallFrame, block types.BlockNum, args 
 		validator_rewards.RewardsPool = big.NewInt(0)
 		validator.LastUpdated = block
 		state.Count++
-		self.validators.ModifyValidator(true, &args.Validator, validator)
+		self.validators.ModifyValidator(&args.Validator, validator)
 		self.validators.ModifyValidatorRewards(&args.Validator, validator_rewards)
 	}
 
@@ -1705,7 +1705,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 	state.RewardsPer1Stake = big.NewInt(0)
 
 	// Creates validator related objects in storage
-	validator := self.validators.CreateValidator(true, owner_address, &args.Validator, args.VrfKey, block, args.Commission, args.Description, args.Endpoint)
+	validator := self.validators.CreateValidator(owner_address, &args.Validator, args.VrfKey, block, args.Commission, args.Description, args.Endpoint)
 	state.Count++
 	self.evm.AddLog(self.logs.MakeValidatorRegisteredLog(&args.Validator))
 
@@ -1713,7 +1713,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 		self.evm.AddLog(self.logs.MakeDelegatedLog(owner_address, &args.Validator, ctx.Value))
 		self.delegations.CreateDelegation(owner_address, &args.Validator, block, ctx.Value)
 		self.delegate_update_values(ctx, validator, 0, 10000)
-		self.validators.ModifyValidator(true, &args.Validator, validator)
+		self.validators.ModifyValidator(&args.Validator, validator)
 		state.Count++
 	}
 
@@ -1789,7 +1789,7 @@ func (self *Contract) setCommission(ctx vm.CallFrame, block types.BlockNum, args
 
 	validator.Commission = args.Commission
 	validator.LastCommissionChange = block
-	self.validators.ModifyValidator(true, &args.Validator, validator)
+	self.validators.ModifyValidator(&args.Validator, validator)
 	self.evm.AddLog(self.logs.MakeCommissionSetLog(&args.Validator, args.Commission))
 
 	return nil
@@ -2277,9 +2277,8 @@ func (self *Contract) undelegateInternal(
 	undelegation_id := self.undelegations.CreateUndelegation(delegator_addr, validator_addr, block, amount)
 	validator.UndelegationsCount++
 
-	// Persist validator state. EBLA runs Magnolia from block 0, so the first arg is always true,
-	// but we read from config for consistency with other call sites.
-	self.validators.ModifyValidator(true, validator_addr, validator)
+	// Persist validator state. Magnolia features are permanent in EBLA from block 0.
+	self.validators.ModifyValidator(validator_addr, validator)
 
 	// Emit canonical Undelegated event
 	self.evm.AddLog(self.logs.MakeUndelegatedLog(delegator_addr, validator_addr, undelegation_id, amount))
