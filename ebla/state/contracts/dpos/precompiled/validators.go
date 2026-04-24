@@ -11,8 +11,9 @@ import (
 	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
-// Pre-hardfork validator struct without UndelegationsCount member
-type ValidatorV1 struct {
+// Validator holds per-validator DPOS state.
+// RLP wire format: field declaration order is load-bearing — do not reorder.
+type Validator struct {
 	// TotalStake == sum of all delegated tokens to the validator
 	TotalStake *big.Int
 
@@ -24,10 +25,6 @@ type ValidatorV1 struct {
 
 	// Block number pointing to latest state
 	LastUpdated types.BlockNum
-}
-
-type Validator struct {
-	*ValidatorV1
 
 	// Number of ongoing/unclaimed undelegations from the validator
 	UndelegationsCount uint16
@@ -131,7 +128,6 @@ func (self *Validators) GetValidatorsCount() uint32 {
 func (self *Validators) CreateValidator(owner_address *common.Address, validator_address *common.Address, vrf_key []byte, block types.BlockNum, commission uint16, description string, endpoint string) (validator *Validator) {
 	// Creates Validator object in storage
 	validator = new(Validator)
-	validator.ValidatorV1 = new(ValidatorV1)
 	validator.Commission = commission
 	validator.TotalStake = big.NewInt(0)
 	validator.LastCommissionChange = block
@@ -186,19 +182,10 @@ func (self *Validators) DeleteValidator(validator_address *common.Address) {
 func (self *Validators) GetValidator(validator_address *common.Address) (validator *Validator) {
 	key := contract_storage.Stor_k_1(self.validator_field, validator_address[:])
 	self.storage.Get(key, func(bytes []byte) {
-		// Try to decode into post-hardfork extented Validator struct first
 		validator = new(Validator)
-		validator.ValidatorV1 = new(ValidatorV1)
-
-		err := rlp.DecodeBytes(bytes, validator)
-		if err != nil {
-			// Try to decode into pre-hardfork ValidatorV1 struct
-			err = rlp.DecodeBytes(bytes, validator.ValidatorV1)
-			validator.UndelegationsCount = 0
-			if err != nil {
-				// This should never happen
-				panic("Unable to decode validator rlp")
-			}
+		if err := rlp.DecodeBytes(bytes, validator); err != nil {
+			// This should never happen
+			panic("Unable to decode validator rlp")
 		}
 	})
 
@@ -254,13 +241,11 @@ func (self *Validators) AddValidatorRewards(validator_address *common.Address, c
 }
 
 type Field interface {
-	ValidatorV1 | Validator | ValidatorInfo | ValidatorRewards
+	Validator | ValidatorInfo | ValidatorRewards
 }
 
 func (self *Validators) getFieldFor(t any) []byte {
 	switch tt := t.(type) {
-	case *ValidatorV1:
-		return self.validator_field
 	case *Validator:
 		return self.validator_field
 	case *ValidatorInfo:

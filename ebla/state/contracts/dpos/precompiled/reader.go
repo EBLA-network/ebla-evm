@@ -93,17 +93,9 @@ func (r Reader) GetStakingBalance(addr *common.Address) (ret *big.Int) {
 	ret = big.NewInt(0)
 	r.storage.Get(storage.Stor_k_1(field_validators, validator_index, addr[:]), func(bytes []byte) {
 		validator := new(Validator)
-		validator.ValidatorV1 = new(ValidatorV1)
-
-		err := rlp.DecodeBytes(bytes, validator)
-		if err != nil {
-			// Try to decode into pre-hardfork ValidatorV1 struct first
-			err = rlp.DecodeBytes(bytes, validator.ValidatorV1)
-			validator.UndelegationsCount = 0
-			if err != nil {
-				// This should never happen
-				panic("Unable to decode validator rlp")
-			}
+		if err := rlp.DecodeBytes(bytes, validator); err != nil {
+			// This should never happen
+			panic("Unable to decode validator rlp")
 		}
 
 		ret = validator.TotalStake
