@@ -110,30 +110,38 @@ var (
 )
 
 const (
+	// BasisPointsScale represents 100% in basis-points (4-digit precision).
+	// Used for commission rates, voting power factors, and balance multipliers.
+	// Example: 1% = 100, 95% = 9500, 100% = 10000.
+	BasisPointsScale uint64 = 10_000
+
+	// InactivityEpochBlocks is the inactivity-slashing epoch length in blocks.
+	// ≈10 hours at 3.7s block time. Validators inactive for the entire epoch
+	// lose 5% of their voting power (per applyInactivityPenalties).
+	//
+	// NOTE: BasisPointsScale and InactivityEpochBlocks share the numeric
+	// value 10000 by coincidence — they represent unrelated semantic
+	// concepts (unit-of-measure vs. block-cadence) and must NOT be
+	// collapsed into a shared constant. The drift hazard if they ever
+	// need different values would be silent and consensus-fracturing.
+	InactivityEpochBlocks uint64 = 10_000
+
 	// Max num of characters in url
 	MaxEndpointLength = 50
-
 	// Max num of characters in description
 	MaxDescriptionLength = 100
-
-	// Maximal commission  [%] * 100 so 1% is 100 & 100% is 10000
-	MaxCommission = uint64(10000)
-
-	// Minimal commission [%] * 100 so 10% is 1000
+	// Maximal commission [%] in basis-points: 100% = BasisPointsScale.
+	MaxCommission = BasisPointsScale
+	// Minimal commission [%] in basis-points: 10% = 1000.
 	MinimumCommission uint16 = 1000
-
 	// Length of vrf public key
 	VrfKeyLength = 32
-
 	// Maximum number of validators per batch that delegator get claim rewards from
 	ClaimAllRewardsMaxCount = 10
-
 	// Maximum number of validators per batch returned by getValidators call
 	GetValidatorsMaxCount = 20
-
 	// Maximum number of delegations per batch returned by getDelegations call
 	GetDelegationsMaxCount = 20
-
 	// Maximum number of undelegations per batch returned by getUndelegations call
 	GetUndelegationsMaxCount = 20
 )
@@ -855,10 +863,11 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 			self.setLastActiveBlock(&validatorAddress, current_block_num)
 
 			current_factor := self.getVotingPowerFactor(&validatorAddress)
-			if current_factor < 10000 {
+			// BasisPointsScale  = 10000
+			if current_factor < BasisPointsScale {
 				prev_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block_num, current_factor)
-				self.setVotingPowerFactor(&validatorAddress, 10000)
-				new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block_num, 10000)
+				self.setVotingPowerFactor(&validatorAddress, BasisPointsScale)
+				new_vote_count := voteCountWithFactor(validator.TotalStake, &self.cfg, current_block_num, BasisPointsScale)
 				if prev_vote_count != new_vote_count {
 					self.eligible_vote_count -= prev_vote_count
 					self.eligible_vote_count = add64p(self.eligible_vote_count, new_vote_count)
@@ -908,8 +917,8 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	self.total_supply.Add(self.total_supply, newMintedRewards)
 	self.saveTotalSupplyDb()
 
-	// Epoch boundary inactivity penalty check (permanent in EBLA from block 0)
-	if current_block_num > 0 && current_block_num%10000 == 0 {
+	// Epoch boundary inactivity penalty check (permanent in EBLA from block 0), InactivityEpochBlocks =10000
+	if current_block_num > 9999 && current_block_num%InactivityEpochBlocks == 0 {
 		self.applyInactivityPenalties(current_block_num)
 	}
 
@@ -919,8 +928,9 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 // applyInactivityPenalties checks all validators at epoch boundaries.
 // Validators inactive for the entire epoch lose 5% of their voting power.
 // Validators whose effective stake drops below threshold are force-evicted.
+// InactivityEpochBlocks = 10000
 func (self *Contract) applyInactivityPenalties(current_block uint64) {
-	epoch_start := current_block - 10000
+	epoch_start := current_block - InactivityEpochBlocks
 
 	// Block-wide budget shared by all in-progress and newly-triggered evictions
 	remaining_budget := MaxEvictionsPerBlock
@@ -978,7 +988,7 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		)
 
 		// new_factor = current_factor * 95 / 100
-		// Math: max value 10000 * 95 = 950000, fits in uint64
+		// Math: max value BasisPointsScale (10000) * 95 = 950000, fits in uint64
 		new_factor := current_factor * 95 / 100
 
 		self.setVotingPowerFactor(&validatorAddress, new_factor)
@@ -997,7 +1007,8 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 
 		// Check eviction: effective stake below threshold
 		effective_balance := new(big.Int).Mul(validator.TotalStake, big.NewInt(int64(new_factor)))
-		effective_balance.Div(effective_balance, big.NewInt(10000))
+		//BasisPointsScale = 10000 = 100%
+		effective_balance.Div(effective_balance, big.NewInt(int64(BasisPointsScale)))
 
 		if self.cfg.DPOS.EligibilityBalanceThreshold.Cmp(effective_balance) > 0 {
 			toEvict = append(toEvict, validatorAddress)
@@ -1712,7 +1723,7 @@ func (self *Contract) registerValidatorWithoutChecks(ctx vm.CallFrame, block typ
 	if ctx.Value.Cmp(big.NewInt(0)) == 1 {
 		self.evm.AddLog(self.logs.MakeDelegatedLog(owner_address, &args.Validator, ctx.Value))
 		self.delegations.CreateDelegation(owner_address, &args.Validator, block, ctx.Value)
-		self.delegate_update_values(ctx, validator, 0, 10000)
+		self.delegate_update_values(ctx, validator, 0, BasisPointsScale)
 		self.validators.ModifyValidator(&args.Validator, validator)
 		state.Count++
 	}
@@ -2094,15 +2105,16 @@ func (self *Contract) saveMintedTokensDb() {
 }
 
 // getVotingPowerFactor returns the voting power factor for a validator.
-// Default is 10000 (100%). Uses sentinel encoding: stores factor+1 so that
-// 0 in storage means "not set" (returns default 10000).
+// Default is BasisPointsScale = 10000 (100%). Uses sentinel encoding: stores
+// factor+1 so that 0 in storage means "not set" (returns default
+// BasisPointsScale).
 func (self *Contract) getVotingPowerFactor(validator *common.Address) uint64 {
 	var stored uint64
 	self.storage.Get(storage.Stor_k_1(field_voting_power_factor, validator[:]), func(bytes []byte) {
 		stored = bin.DEC_b_endian_compact_64(bytes)
 	})
 	if stored == 0 {
-		return 10000 // not set, default = full power
+		return BasisPointsScale // not set, default = full power
 	}
 	return stored - 1 // sentinel: stored value is factor + 1
 }
@@ -2173,8 +2185,9 @@ func voteCountWithFactor(staking_balance *big.Int, cfg *chain_config.ChainConfig
 		return 0
 	}
 	// effective_balance = staking_balance * factor / 10000
+	// BasisPointsScale = 10000
 	effective_balance := new(big.Int).Mul(staking_balance, big.NewInt(int64(factor)))
-	effective_balance.Div(effective_balance, big.NewInt(10000))
+	effective_balance.Div(effective_balance, big.NewInt(int64(BasisPointsScale)))
 
 	if effective_balance.Cmp(cfg.DPOS.EligibilityBalanceThreshold) >= 0 {
 		return bigutil.Div(effective_balance, cfg.DPOS.VoteEligibilityBalanceStep).Uint64()

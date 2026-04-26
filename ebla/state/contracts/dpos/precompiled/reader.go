@@ -85,7 +85,8 @@ func (r Reader) IsEligible(address *common.Address) bool {
 		return false
 	}
 	effective := new(big.Int).Mul(r.GetStakingBalance(address), big.NewInt(int64(factor)))
-	effective.Div(effective, big.NewInt(10000))
+	// BasisPointsScale = 10000
+	effective.Div(effective, big.NewInt(int64(BasisPointsScale)))
 	return r.cfg.DPOS.EligibilityBalanceThreshold.Cmp(effective) <= 0
 }
 
@@ -159,14 +160,14 @@ func (r Reader) GetTotalSupply() *big.Int {
 }
 
 // getVotingPowerFactor reads the voting power factor from storage for the Reader.
-// Uses sentinel encoding: stored value is factor+1, 0 means not set (returns 10000).
+// Uses sentinel encoding: stored value is factor+1, 0 means not set (returns BasisPointsScale=10000).
 func (r Reader) getVotingPowerFactor(addr *common.Address) uint64 {
 	var stored uint64
 	r.storage.Get(storage.Stor_k_1(field_voting_power_factor, addr[:]), func(bytes []byte) {
 		stored = bin.DEC_b_endian_compact_64(bytes)
 	})
 	if stored == 0 {
-		return 10000
+		return BasisPointsScale
 	}
 	return stored - 1
 }
