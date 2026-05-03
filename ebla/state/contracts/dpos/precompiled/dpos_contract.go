@@ -859,7 +859,12 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 			continue
 		}
 		// === NEW: Track activity + Full recovery (MUST be after validator nil check) ===
-		if validatorStats.DagBlocksCount > 0 {
+		// Recovery hook: validator demonstrated liveness this block.
+		// VoteWeight > 0 is the primary signal (proves a certified vote was cast).
+		// DagBlocksCount > 0 is a redundant signal kept for backward compatibility:
+		// it only triggers when traffic exists AND the validator packaged transactions,
+		// while VoteWeight > 0 triggers on any consensus participation regardless of traffic.
+		if validatorStats.DagBlocksCount > 0 || validatorStats.VoteWeight > 0 {
 			self.setLastActiveBlock(&validatorAddress, current_block_num)
 
 			current_factor := self.getVotingPowerFactor(&validatorAddress)
