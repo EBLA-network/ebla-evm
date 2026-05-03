@@ -773,6 +773,9 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	current_block_num := self.evm.GetBlock().Number
 	blockReward = self.processBlockReward(current_block_num)
 
+	// Next line to log Penalties
+	fmt.Printf("[REWARDS] DistributeRewards ENTER block=%d author=%s\n", current_block_num, blockAuthorAddr.Hex())
+
 	totalReward := uint256.NewInt(0)
 	votesReward := uint256.NewInt(0)
 	blockAuthorReward := uint256.NewInt(0)
@@ -935,6 +938,8 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 // Validators whose effective stake drops below threshold are force-evicted.
 // InactivityEpochBlocks = 10000
 func (self *Contract) applyInactivityPenalties(current_block uint64) {
+	// Next line to log Penalties
+	fmt.Printf("[INACTIVITY] applyInactivityPenalties ENTER block=%d\n", current_block)
 	epoch_start := current_block - InactivityEpochBlocks
 
 	// Block-wide budget shared by all in-progress and newly-triggered evictions
@@ -995,6 +1000,10 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		// new_factor = current_factor * 95 / 100
 		// Math: max value BasisPointsScale (10000) * 95 = 950000, fits in uint64
 		new_factor := current_factor * 95 / 100
+
+		// Next line to log Penalties
+		fmt.Printf("[INACTIVITY] DECAY block=%d validator=%s last_active=%d epoch_start=%d factor_before=%d factor_after=%d\n",
+			current_block, validatorAddress.Hex(), last_active, epoch_start, current_factor, new_factor)
 
 		self.setVotingPowerFactor(&validatorAddress, new_factor)
 
