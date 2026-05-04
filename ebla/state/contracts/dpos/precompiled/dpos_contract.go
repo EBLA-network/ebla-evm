@@ -165,6 +165,13 @@ var (
 	field_voting_power_factor = []byte{9}  // per-validator, uint64 in basis points (stored as factor+1)
 	field_last_active_block   = []byte{10} // per-validator, uint64 PBFT block number
 	field_eviction_cursor     = []byte{11} // per-validator, uint32 eviction cursor (presence = in-progress)
+	// NEW - EBLA - Idempotency guard for applyInactivityPenalties.
+	// DistributeRewards is invoked once per BlockStats by the rewards-distribution batch
+	// loop in ebla/C/state.go:251. For an N-block batch crossing an epoch boundary, this
+	// caused applyInactivityPenalties to fire N times at the same boundary block,
+	// producing N compounding decay events. This slot tracks the most recent boundary
+	// block already processed, so the guard at the call site can skip iterations 2..N.
+	field_last_processed_epoch_block = []byte{12} // chain-wide, uint64 PBFT block number
 )
 
 // State of the rewards distribution algorithm
@@ -773,6 +780,9 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	current_block_num := self.evm.GetBlock().Number
 	blockReward = self.processBlockReward(current_block_num)
 
+	// Next line to log Penalties
+	fmt.Printf("[REWARDS] DistributeRewards ENTER block=%d author=%s\n", current_block_num, blockAuthorAddr.Hex())
+
 	totalReward := uint256.NewInt(0)
 	votesReward := uint256.NewInt(0)
 	blockAuthorReward := uint256.NewInt(0)
@@ -859,7 +869,12 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 			continue
 		}
 		// === NEW: Track activity + Full recovery (MUST be after validator nil check) ===
-		if validatorStats.DagBlocksCount > 0 {
+		// Recovery hook: validator demonstrated liveness this block.
+		// VoteWeight > 0 is the primary signal (proves a certified vote was cast).
+		// DagBlocksCount > 0 is a redundant signal kept for backward compatibility:
+		// it only triggers when traffic exists AND the validator packaged transactions,
+		// while VoteWeight > 0 triggers on any consensus participation regardless of traffic.
+		if validatorStats.DagBlocksCount > 0 || validatorStats.VoteWeight > 0 {
 			self.setLastActiveBlock(&validatorAddress, current_block_num)
 
 			current_factor := self.getVotingPowerFactor(&validatorAddress)
@@ -918,8 +933,24 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 	self.saveTotalSupplyDb()
 
 	// Epoch boundary inactivity penalty check (permanent in EBLA from block 0), InactivityEpochBlocks =10000
+	//
+	// IMPORTANT: idempotency guard:
+	// DistributeRewards is invoked once per BlockStats by the rewards-distribution batch loop
+	// (see ebla/C/state.go:251). For batches that cross an epoch boundary, current_block_num
+	// stays fixed at the boundary block for ALL iterations (the EVM context is set at the
+	// batch boundary, not advanced per-iteration). Without the inner guard, applyInactivityPenalties
+	// would fire ~100 times per boundary, causing compounding decay (~100 × 5% = effective ~99%
+	// loss in one epoch instead of the intended single 5%).
+	//
+	// The inner guard ensures applyInactivityPenalties runs EXACTLY ONCE per epoch boundary
+	// regardless of the batch size. The setter MUST run BEFORE the call so re-entry within
+	// the same batch sees the updated value.
 	if current_block_num > 9999 && current_block_num%InactivityEpochBlocks == 0 {
-		self.applyInactivityPenalties(current_block_num)
+		last_processed := self.getLastProcessedEpochBlock()
+		if last_processed < current_block_num {
+			self.setLastProcessedEpochBlock(current_block_num)
+			self.applyInactivityPenalties(current_block_num)
+		}
 	}
 
 	return newMintedRewards
@@ -930,6 +961,8 @@ func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats
 // Validators whose effective stake drops below threshold are force-evicted.
 // InactivityEpochBlocks = 10000
 func (self *Contract) applyInactivityPenalties(current_block uint64) {
+	// Next line to log Penalties
+	fmt.Printf("[INACTIVITY] applyInactivityPenalties ENTER block=%d\n", current_block)
 	epoch_start := current_block - InactivityEpochBlocks
 
 	// Block-wide budget shared by all in-progress and newly-triggered evictions
@@ -990,6 +1023,10 @@ func (self *Contract) applyInactivityPenalties(current_block uint64) {
 		// new_factor = current_factor * 95 / 100
 		// Math: max value BasisPointsScale (10000) * 95 = 950000, fits in uint64
 		new_factor := current_factor * 95 / 100
+
+		// Next line to log Penalties
+		fmt.Printf("[INACTIVITY] DECAY block=%d validator=%s last_active=%d epoch_start=%d factor_before=%d factor_after=%d\n",
+			current_block, validatorAddress.Hex(), last_active, epoch_start, current_factor, new_factor)
 
 		self.setVotingPowerFactor(&validatorAddress, new_factor)
 
@@ -2153,6 +2190,31 @@ func (self *Contract) setLastActiveBlock(validator *common.Address, block uint64
 // clearLastActiveBlock removes the stored last active block.
 func (self *Contract) clearLastActiveBlock(validator *common.Address) {
 	self.storage.Put(storage.Stor_k_1(field_last_active_block, validator[:]), nil)
+}
+
+// getLastProcessedEpochBlock returns the most recent epoch boundary block number
+// for which applyInactivityPenalties has already executed.
+//
+// Returns 0 when never set (storage default), which correctly indicates "no epoch
+// has been processed yet" — important so the first epoch boundary at block 10000
+// satisfies `0 < 10000` and runs.
+func (self *Contract) getLastProcessedEpochBlock() uint64 {
+	var result uint64
+	self.storage.Get(storage.Stor_k_1(field_last_processed_epoch_block), func(bytes []byte) {
+		result = bin.DEC_b_endian_compact_64(bytes)
+	})
+	return result
+}
+
+// setLastProcessedEpochBlock records that applyInactivityPenalties has been run
+// for the given epoch boundary block. The set MUST happen BEFORE invoking
+// applyInactivityPenalties so that subsequent iterations of the rewards-distribution
+// batch loop see the updated value and skip the redundant call.
+func (self *Contract) setLastProcessedEpochBlock(block uint64) {
+	self.storage.Put(
+		storage.Stor_k_1(field_last_processed_epoch_block),
+		bin.ENC_b_endian_compact_64_1(block),
+	)
 }
 
 // getEvictionCursor returns whether a forced eviction is in progress for this validator
