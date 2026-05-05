@@ -553,17 +553,24 @@ func TestYieldCurveAspenHf(t *testing.T) {
 	tc.Assert.Equal(expected_yield, yield)
 	tc.Assert.Equal(expected_block_reward, block_reward)
 
-	// Epoch 36 (MaxEpoch, block 360M): yield = 11044
+	// Epoch 36 (block 360M): yield = 11044
 	expected_yield = uint256.NewInt(11044)
 	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
 	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(360_000_000))
 	tc.Assert.Equal(expected_yield, yield)
 	tc.Assert.Equal(expected_block_reward, block_reward)
 
-	// Epoch 37+ (beyond MaxEpoch): yield = floor = 10000
-	expected_yield = uint256.NewInt(10000)
+	// Epoch 37 (last natural-decay value above floor, block 370M): yield = 10492
+	expected_yield = uint256.NewInt(10492)
 	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
 	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(370_000_000))
+	tc.Assert.Equal(expected_yield, yield)
+	tc.Assert.Equal(expected_block_reward, block_reward)
+
+	// Epoch 38+ (beyond table, block 380M+): yield = floor = 10000
+	expected_yield = uint256.NewInt(10000)
+	expected_block_reward = calculateExpectedBlockReward(total_stake, expected_yield, cfg)
+	block_reward, yield = yield_curve.CalculateBlockReward(total_stake, total_supply, uint64(380_000_000))
 	tc.Assert.Equal(expected_yield, yield)
 	tc.Assert.Equal(expected_block_reward, block_reward)
 
