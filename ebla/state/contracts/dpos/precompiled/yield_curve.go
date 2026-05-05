@@ -13,27 +13,78 @@ var YieldFractionDecimalPrecision = uint256.NewInt(1e+6)
 
 // EBLA epoch-based yield decay constants
 const (
-	// InitialYield is 7% expressed with 1e6 precision = 70000
-	InitialYieldValue uint64 = 70000
-
-	// MinYield is 1% floor expressed with 1e6 precision = 10000
+	// MinYieldValue: the 1% yield floor (1e6 precision).
+	// Applies from epoch 38 onward, where natural decay falls below 1.0000%.
 	MinYieldValue uint64 = 10000
-
-	// EpochLength: number of blocks per epoch (10 million)
+	// EpochLength: number of blocks per epoch (10 million ≈ 14 months at ~3.2s/block).
 	EpochLength uint64 = 10_000_000
 
-	// DecayNumerator: yield retains 95% each epoch
-	DecayNumerator uint64 = 95
-
-	// DecayDenominator: base for decay fraction
-	DecayDenominator uint64 = 100
-
-	// MaxEpoch: safety cap to prevent uint256 overflow.
-	// At epoch 37, InitialYieldValue * 95^37 exceeds uint256.
-	// At epoch 36, yield = 1.104% (still above floor).
-	// Epochs > MaxEpoch return MinYield directly.
-	MaxEpoch uint64 = 36
+	MaxEpoch uint64 = 37
 )
+
+// EblaYieldTable encodes the per-epoch yield rate (1e6 precision).
+//
+// SPEC: Initial 7%, decays by 5% per epoch (10M blocks ≈ 14 months) until
+// the natural decay value falls below the 1% floor at epoch 38.
+//
+// Each value is computed as floor(70000 × 95^epoch / 100^epoch), with all
+// arithmetic performed at full precision and floor-divided exactly once at
+// the end. This avoids accumulated truncation that would result from
+// iterative compounding.
+//
+// At epoch 37 the natural value (10492 = 1.0492%) is still above the floor
+// (10000 = 1.0000%), so it is encoded explicitly. Epoch 38+ falls below
+// the floor naturally and is served by the floor branch in calculateCurrentYield.
+//
+// CONSENSUS-CRITICAL: This table is part of EBLA's economic consensus.
+// Modifying any entry changes the chain's emission schedule. Any change
+// requires a coordinated hardfork. Verified against the canonical formula
+// by TestEblaYieldTableMatchesFormula in dpos_test.go (CI-gated).
+//
+// Generation reference (Python):
+//
+//	for e in range(38): print((70000 * 95**e) // (100**e))
+var EblaYieldTable = [38]uint64{
+	70000, // epoch  0:  7.0000%   (initial)
+	66500, // epoch  1:  6.6500%
+	63175, // epoch  2:  6.3175%
+	60016, // epoch  3:  6.0016%
+	57015, // epoch  4:  5.7015%
+	54164, // epoch  5:  5.4164%
+	51456, // epoch  6:  5.1456%
+	48883, // epoch  7:  4.8883%
+	46439, // epoch  8:  4.6439%
+	44117, // epoch  9:  4.4117%
+	41911, // epoch 10:  4.1911%
+	39816, // epoch 11:  3.9816%
+	37825, // epoch 12:  3.7825%
+	35933, // epoch 13:  3.5933%
+	34137, // epoch 14:  3.4137%
+	32430, // epoch 15:  3.2430%
+	30808, // epoch 16:  3.0808%
+	29268, // epoch 17:  2.9268%
+	27805, // epoch 18:  2.7805%
+	26414, // epoch 19:  2.6414%
+	25094, // epoch 20:  2.5094%
+	23839, // epoch 21:  2.3839%
+	22647, // epoch 22:  2.2647%
+	21514, // epoch 23:  2.1514%
+	20439, // epoch 24:  2.0439%
+	19417, // epoch 25:  1.9417%
+	18446, // epoch 26:  1.8446%
+	17524, // epoch 27:  1.7524%
+	16647, // epoch 28:  1.6647%
+	15815, // epoch 29:  1.5815%
+	15024, // epoch 30:  1.5024%
+	14273, // epoch 31:  1.4273%
+	13559, // epoch 32:  1.3559%
+	12881, // epoch 33:  1.2881%
+	12237, // epoch 34:  1.2237%
+	11625, // epoch 35:  1.1625%
+	11044, // epoch 36:  1.1044%
+	10492, // epoch 37:  1.0492%   (last natural-decay value above floor)
+	// Epoch 38+: served by MinYieldValue (10000 = 1.0000%) in calculateCurrentYield
+}
 
 type YieldCurve struct {
 	cfg        chain_config.ChainConfig
@@ -56,58 +107,20 @@ func (self *YieldCurve) GetMaxSupply() *uint256.Int {
 	return new(uint256.Int).Set(self.max_supply)
 }
 
-// pow256 computes base^exp using uint256 integer arithmetic.
-// SAFETY: caller must ensure InitialYieldValue * base^exp fits uint256.
-// With MaxEpoch=36: 70000 * 95^36 ≈ 1.10e76 < uint256 max (1.15e77).
-func pow256(base, exp uint64) *uint256.Int {
-	result := uint256.NewInt(1)
-	b := uint256.NewInt(base)
-	for i := uint64(0); i < exp; i++ {
-		result.Mul(result, b)
-	}
-	return result
-}
-
-// calculateCurrentYield computes the epoch-based decaying yield.
+// calculateCurrentYield returns the yield rate for the given block.
 //
-// Formula: yield = max(InitialYield × 95^epoch / 100^epoch, MinYield)
-// Where:   epoch = block_number / EpochLength
+// O(1) lookup against EblaYieldTable. Pure function: no storage, no mutation.
+// For epoch > MaxEpoch, returns the MinYieldValue floor (1.0000%).
 //
-// All arithmetic is pure integer using uint256. No floating point.
-// Returns yield with YieldFractionDecimalPrecision (1e6) precision.
+// Determinism: identical answer on all honest validators given identical
+// block_num input. No floating point, no system calls, no shared state.
 func (self *YieldCurve) calculateCurrentYield(block_num uint64) *uint256.Int {
 	epoch := block_num / EpochLength
 
-	// Safety cap: prevent uint256 overflow in pow256 multiplication.
-	// At epoch 37+, InitialYieldValue * 95^epoch overflows uint256.
-	// Natural floor (1%) is reached at epoch 38, so returning
-	// MinYield for epochs > MaxEpoch is both safe and correct.
 	if epoch > MaxEpoch {
 		return uint256.NewInt(MinYieldValue)
 	}
-
-	// Epoch 0: no decay applied
-	if epoch == 0 {
-		return uint256.NewInt(InitialYieldValue)
-	}
-
-	// yield = InitialYield × 95^epoch / 100^epoch
-	// Using batch exponentiation (not iterative) to avoid
-	// compounding integer truncation errors across epochs.
-	numerator := pow256(DecayNumerator, epoch)     // 95^epoch
-	denominator := pow256(DecayDenominator, epoch) // 100^epoch
-
-	current_yield := uint256.NewInt(InitialYieldValue)
-	current_yield.Mul(current_yield, numerator)
-	current_yield.Div(current_yield, denominator)
-
-	// Enforce minimum yield floor (1%)
-	min_yield := uint256.NewInt(MinYieldValue)
-	if current_yield.Cmp(min_yield) < 0 {
-		return min_yield
-	}
-
-	return current_yield
+	return uint256.NewInt(EblaYieldTable[epoch])
 }
 
 // CalculateBlockReward computes the per-block reward.
