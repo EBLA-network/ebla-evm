@@ -55,7 +55,6 @@ var (
 			DelegationDelay:             2,
 			DelegationLockingPeriod:     4,
 			BlocksPerYear:               8523783, // 31536000000 / 3700 (EBLA: lambda=1500, block=3.7s)
-			YieldPercentage:             7,
 		},
 		Hardforks: chain_config.HardforksConfig{
 			Slashing: chain_config.SlashingConfig{

@@ -103,7 +103,6 @@ var (
 			DelegationDelay:             2,
 			DelegationLockingPeriod:     4,
 			BlocksPerYear:               8523783, // 31536000000 / 3700 (EBLA: lambda=1500, block=3.7s)
-			YieldPercentage:             7,
 			TrxMinGasPrice:              1000000000,
 			TrxMaxGasLimit:              1,
 		},
@@ -140,7 +139,6 @@ func CopyDefaultChainConfig() chain_config.ChainConfig {
 	new_cfg.DPOS.DelegationDelay = DefaultChainCfg.DPOS.DelegationDelay
 	new_cfg.DPOS.EligibilityBalanceThreshold = DefaultChainCfg.DPOS.EligibilityBalanceThreshold
 	new_cfg.DPOS.VoteEligibilityBalanceStep = DefaultChainCfg.DPOS.VoteEligibilityBalanceStep
-	new_cfg.DPOS.YieldPercentage = DefaultChainCfg.DPOS.YieldPercentage
 	new_cfg.DPOS.BlocksPerYear = DefaultChainCfg.DPOS.BlocksPerYear
 	new_cfg.DPOS.InitialValidators = DefaultChainCfg.DPOS.InitialValidators
 	new_cfg.Hardforks = DefaultChainCfg.Hardforks
@@ -634,8 +632,7 @@ func TestAspenHf(t *testing.T) {
 
 	contract_balance := new(big.Int).Set(total_stake)
 
-	// EBLA: No pre-Aspen loop needed. BlockNumPartTwo = 0 means Aspen is active
-	// from genesis. The old pre-Aspen fixed-yield path is dead code on EBLA.
+	// EBLA: yield curve is permanent from block 0; epoch-based decay applies from genesis.
 
 	// Initialize yield curve for epoch-based reward calculation
 	var yield_curve dpos.YieldCurve

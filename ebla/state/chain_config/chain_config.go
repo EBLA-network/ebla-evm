@@ -73,7 +73,6 @@ type DPOSConfig = struct {
 	DelegationDelay             uint32 // [number of blocks]
 	DelegationLockingPeriod     uint32 // [number of blocks]
 	BlocksPerYear               uint32 // [count]
-	YieldPercentage             uint16 // [%]
 	TrxMinGasPrice              uint64 // [wei] 1 Gwei minimum
 	TrxMaxGasLimit              uint64 // max gas per transaction
 	InitialValidators           []GenesisValidator
@@ -84,10 +83,6 @@ type ChainConfig struct {
 	GenesisBalances core.BalanceMap
 	DPOS            DPOSConfig
 	Hardforks       HardforksConfig
-}
-
-func (self *ChainConfig) RewardsEnabled() bool {
-	return self.DPOS.YieldPercentage > 0
 }
 
 func (self *ChainConfig) GenesisBalancesSum() *big.Int {

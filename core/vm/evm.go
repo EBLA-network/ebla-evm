@@ -85,10 +85,10 @@ func DefaultOpts() Opts {
 
 type GetHashFunc = func(types.BlockNum) *big.Int
 
-type Rules struct {
-	IsAspenPartOne bool
-	IsAspenPartTwo bool
-}
+// Rules carries per-block consensus flags that the EVM may need to gate
+// behavior on. Empty since Phase 14.3 made all Aspen gates permanent
+// from block 0; reserved for future hardfork rules.
+type Rules struct{}
 
 type Block struct {
 	Number types.BlockNum

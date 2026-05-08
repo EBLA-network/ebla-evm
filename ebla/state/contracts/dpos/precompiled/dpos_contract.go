@@ -208,7 +208,6 @@ type Contract struct {
 	amount_delegated_orig    *uint256.Int
 	amount_delegated         *uint256.Int
 	blocks_per_year          *uint256.Int
-	yield_percentage         *uint256.Int
 	dag_proposers_reward     *uint256.Int
 	max_block_author_reward  *uint256.Int
 
@@ -466,7 +465,6 @@ func (self *Contract) lazy_init() {
 	self.yield_curve.Init(self.cfg)
 
 	self.blocks_per_year = uint256.NewInt(uint64(self.cfg.DPOS.BlocksPerYear))
-	self.yield_percentage = uint256.NewInt(uint64(self.cfg.DPOS.YieldPercentage))
 
 	self.dag_proposers_reward = uint256.NewInt(uint64(self.cfg.DPOS.DagProposersReward))
 	self.max_block_author_reward = uint256.NewInt(uint64(self.cfg.DPOS.MaxBlockAuthorReward))
@@ -756,18 +754,52 @@ func (self *Contract) Run(ctx vm.CallFrame, evm *vm.EVM) ([]byte, error) {
 	return nil, nil
 }
 
+// processBlockReward computes the per-block reward using the EBLA epoch-decay
+// yield curve and enforces the 12B EBLA hard cap.
+//
+// On first call (post-genesis), it migrates legacy minted_tokens accounting
+// into the new total_supply slot. After that, every block:
+//   - computes block_reward = total_delegation × yield(block_num) / (1e6 × blocks_per_year)
+//   - if total_supply >= max_supply, returns 0 (cap reached)
+//   - otherwise clamps block_reward to (max_supply - total_supply)
+func (self *Contract) processBlockReward(block_num uint64) *uint256.Int {
+	if self.total_supply == nil {
+		self.total_supply = self.yield_curve.CalculateTotalSupply(self.minted_tokens)
+		self.saveTotalSupplyDb()
+		self.eraseMintedTokensDb()
+	}
+
+	// Calculate block reward using epoch-based yield decay
+	blockReward, yield := self.yield_curve.CalculateBlockReward(self.amount_delegated, self.total_supply, block_num)
+
+	// CRITICAL: Enforce max_supply cap.
+	// The epoch decay model has a 1% yield floor — rewards never naturally stop.
+	// This cap ensures total_supply never exceeds max_supply (12B EBLA).
+	max_supply := self.yield_curve.GetMaxSupply()
+	if self.total_supply.Cmp(max_supply) >= 0 {
+		self.saveYieldDb(uint64(0))
+		return uint256.NewInt(0)
+	}
+	remaining := new(uint256.Int).Sub(max_supply, self.total_supply)
+	if blockReward.Cmp(remaining) > 0 {
+		blockReward = remaining.Clone()
+	}
+
+	self.saveYieldDb(yield.Uint64())
+	return blockReward
+}
+
 // ----------------------------------------------------------------
 // Brief description of distribution algorithm
 // ----------------------------------------------------------------
-// - Total block reward - `blockReward` is calculated  based on yield_percentage
+// - Total block reward - `blockReward` is calculated from the EBLA epoch-decay
+//   yield curve (see yield_curve.go and EblaYieldTable).
 // - Block reward is distributed based on `VotesToTransactionsRatio` between votes and transactions
 // - Then bonus reward is calculated based on MaxBlockAuthorReward
 // - Vote reward is reduced by bonus reward
 // - Bonus reward is theoretical and it will be added to block proposer (author) only when all votes are included
 // - If less reward votes are included, rest of the bonus reward it is just burned
 // - Then for each validator vote and transaction proportion rewards are calculated and distributed
-// EBLA: All hardforks active from block 0. The else branch
-// (pre-Aspen fixed yield) is dead code on EBLA mainnet.
 
 func (self *Contract) DistributeRewards(rewardsStats *rewards_stats.RewardsStats) *uint256.Int {
 	// When calling DistributeRewards, internal structures must be always initialized

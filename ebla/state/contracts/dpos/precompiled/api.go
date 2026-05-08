@@ -55,7 +55,7 @@ func (api *API) Init(cfg chain_config.ChainConfig) *API {
 	// total supply mus be <= max supply
 	total_supply := cfg.GenesisBalancesSum()
 	total_supply.Add(total_supply, cfg.Hardforks.AspenHf.GeneratedRewards)
-	asserts.Holds(cfg.Hardforks.AspenHf.MaxSupply.Cmp(total_supply) >= 0, fmt.Sprintf("Hardforks.AspenHf.PartTwo.MaxSupply - Hardforks.AspenHf.PartTwo.GeneratedRewards (%d) must be >= Sum of genesis balances (%d)", cfg.Hardforks.AspenHf.MaxSupply, total_supply))
+	asserts.Holds(cfg.Hardforks.AspenHf.MaxSupply.Cmp(total_supply) >= 0, fmt.Sprintf("Hardforks.AspenHf.MaxSupply (%d) must be >= sum of genesis balances + Hardforks.AspenHf.GeneratedRewards (%d)", cfg.Hardforks.AspenHf.MaxSupply, total_supply))
 
 	total_supply_uin256, overflow := uint256.FromBig(total_supply)
 	asserts.Holds(overflow == false, "total_supply overflow")

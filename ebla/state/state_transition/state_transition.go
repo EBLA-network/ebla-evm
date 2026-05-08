@@ -125,7 +125,9 @@ func (st *StateTransition) GetEvmState() *state_evm.TransitionState {
 }
 
 func (st *StateTransition) DistributeRewards(rewardsStats *rewards_stats.RewardsStats) (totalReward *uint256.Int) {
-	if st.chain_config.RewardsEnabled() && rewardsStats != nil {
+	// Aspen is permanent from block 0 in EBLA. Rewards run unconditionally
+	// when block-reward stats are provided (skipped only for pure-EVM RPC calls).
+	if rewardsStats != nil {
 		if st.dpos_contract == nil {
 			panic("Stats rewards enabled but no dpos contract registered")
 		}
