@@ -520,7 +520,7 @@ func TestUndelegateMin(t *testing.T) {
 	test.ExecuteAndCheck(addr(2), big.NewInt(0), test.Pack("undelegate", val_addr, bigutil.Mul(DefaultMinimumDeposit, big.NewInt(2))), util.ErrorString(""), util.ErrorString(""))
 }
 
-func TestYieldCurveAspenHf(t *testing.T) {
+func TestYieldCurveDecay(t *testing.T) {
 	tc := tests.NewTestCtx(t)
 	cfg := CopyDefaultChainConfig()
 

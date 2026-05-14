@@ -69,7 +69,7 @@ func (st *StateTransition) Init(
 		if st.dpos_contract != nil {
 			util.PanicIfNotNil(st.dpos_contract.ApplyGenesis(st.state.GetAccount))
 		}
-		st.applyHFChanges()
+		st.applyGenesisInit()
 		st.evm_state_checkpoint()
 		st.Commit()
 	}
@@ -105,7 +105,7 @@ func (st *StateTransition) BeginBlock(blk_info *vm.BlockInfo) {
 	blk_n := st.BlockNumber()
 	rules_changed := st.evm.SetBlock(&vm.Block{Number: blk_n, BlockInfo: *blk_info}, st.chain_config.Protocol.Rules(blk_n))
 	if rules_changed {
-		st.applyHFChanges()
+		st.applyGenesisInit()
 	}
 }
 
@@ -125,7 +125,7 @@ func (st *StateTransition) GetEvmState() *state_evm.TransitionState {
 }
 
 func (st *StateTransition) DistributeRewards(rewardsStats *rewards_stats.RewardsStats) (totalReward *uint256.Int) {
-	// Aspen is permanent from block 0 in EBLA. Rewards run unconditionally
+	// Rewards run unconditionally from block 0 in EBLA (yield curve + supply cap are permanent)
 	// when block-reward stats are provided (skipped only for pure-EVM RPC calls).
 	if rewardsStats != nil {
 		if st.dpos_contract == nil {

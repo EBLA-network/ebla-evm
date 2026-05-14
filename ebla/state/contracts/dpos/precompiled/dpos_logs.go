@@ -43,7 +43,7 @@ func (self *Logs) MakeUndelegatedLog(delegator, validator *common.Address, undel
 	return *checkError(event.MakeLog(dpos_contract_address, delegator, validator, undelegation_id, amount))
 }
 
-//New EBAL
+// New EBAL
 // event UndelegateConfirmedV2(address indexed delegator, address indexed validator, uint64 undelegation_id, uint256 amount);
 func (self *Logs) MakeUndelegateConfirmedLog(delegator, validator *common.Address, undelegation_id uint64, amount *big.Int) vm.LogRecord {
 	event := self.Events["UndelegateConfirmed"]
