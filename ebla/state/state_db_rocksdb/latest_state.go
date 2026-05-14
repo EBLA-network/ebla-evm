@@ -7,10 +7,10 @@ import (
 
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
 	"github.com/EBLA-network/ebla-evm/ebla/util/goroutines"
+	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/linxGnu/grocksdb"
 )
 

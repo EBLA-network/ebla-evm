@@ -42,6 +42,7 @@ func (self *Logs) MakeUndelegatedLog(delegator, validator *common.Address, undel
 
 	return *checkError(event.MakeLog(dpos_contract_address, delegator, validator, undelegation_id, amount))
 }
+
 //New EBAL
 // event UndelegateConfirmedV2(address indexed delegator, address indexed validator, uint64 undelegation_id, uint256 amount);
 func (self *Logs) MakeUndelegateConfirmedLog(delegator, validator *common.Address, undelegation_id uint64, amount *big.Int) vm.LogRecord {
@@ -98,16 +99,16 @@ func (self *Logs) MakeValidatorInfoSetLog(account *common.Address) vm.LogRecord 
 }
 
 func (self *Logs) MakeInactivityPenaltyLog(validator *common.Address, new_factor uint64) vm.LogRecord {
-    event := self.Events["InactivityPenalty"]
-    return *checkError(event.MakeLog(dpos_contract_address, validator, new_factor))
+	event := self.Events["InactivityPenalty"]
+	return *checkError(event.MakeLog(dpos_contract_address, validator, new_factor))
 }
 
 func (self *Logs) MakeValidatorEvictedLog(validator *common.Address) vm.LogRecord {
-    event := self.Events["ValidatorEvicted"]
-    return *checkError(event.MakeLog(dpos_contract_address, validator))
+	event := self.Events["ValidatorEvicted"]
+	return *checkError(event.MakeLog(dpos_contract_address, validator))
 }
 
 func (self *Logs) MakeVotingPowerRecoveredLog(validator *common.Address) vm.LogRecord {
-    event := self.Events["VotingPowerRecovered"]
-    return *checkError(event.MakeLog(dpos_contract_address, validator))
+	event := self.Events["VotingPowerRecovered"]
+	return *checkError(event.MakeLog(dpos_contract_address, validator))
 }

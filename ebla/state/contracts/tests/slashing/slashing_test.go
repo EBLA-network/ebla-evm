@@ -56,11 +56,11 @@ var (
 			DelegationLockingPeriod:     4,
 			BlocksPerYear:               8523783, // 31536000000 / 3700 (EBLA: lambda=1500, block=3.7s)
 		},
-		Hardforks: chain_config.HardforksConfig{
+		Protocol: chain_config.ProtocolConfig{
 			Slashing: chain_config.SlashingConfig{
 				JailTime: 5,
 			},
-			AspenHf: chain_config.AspenHfConfig{
+			Supply: chain_config.SupplyConfig{
 				// Max token supply is 12 Billion EBLA -> 12e+9(12 billion) * 1e+18(ebla precision)
 				MaxSupply:        new(big.Int).Mul(big.NewInt(12e+9), big.NewInt(1e+18)),
 				GeneratedRewards: big.NewInt(0),
@@ -285,7 +285,7 @@ func TestGetJailBlock(t *testing.T) {
 	result := test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", malicious_vote_author1), util.ErrorString(""), util.ErrorString(""))
 	result_parsed := new(uint64)
 	test.Unpack(result_parsed, "getJailBlock", result.CodeRetval)
-	tc.Assert.Equal(1+DefaultChainCfg.Hardforks.Slashing.JailTime, *result_parsed)
+	tc.Assert.Equal(1+DefaultChainCfg.Protocol.Slashing.JailTime, *result_parsed)
 
 	// Test cumulative jail time - commit another double voting proof
 	vote_a = DefaultVote
@@ -305,7 +305,7 @@ func TestGetJailBlock(t *testing.T) {
 	result = test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", malicious_vote_author1), util.ErrorString(""), util.ErrorString(""))
 	result_parsed = new(uint64)
 	test.Unpack(result_parsed, "getJailBlock", result.CodeRetval)
-	tc.Assert.Equal(1+2*uint64(test.Chain_cfg.DPOS.DelegationDelay)+DefaultChainCfg.Hardforks.Slashing.JailTime, *result_parsed)
+	tc.Assert.Equal(1+2*uint64(test.Chain_cfg.DPOS.DelegationDelay)+DefaultChainCfg.Protocol.Slashing.JailTime, *result_parsed)
 }
 
 func TestMakeLogsCheckTopics(t *testing.T) {
@@ -317,7 +317,7 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 
 	count := 0
 	{
-		log := logs.MakeJailedLog(&common.ZeroAddress, block, block+DefaultChainCfg.Hardforks.Slashing.JailTime, slashing.DOUBLE_VOTING)
+		log := logs.MakeJailedLog(&common.ZeroAddress, block, block+DefaultChainCfg.Protocol.Slashing.JailTime, slashing.DOUBLE_VOTING)
 		tc.Assert.Equal(log.Topics[0], JailedEventHash)
 		count++
 	}
@@ -328,7 +328,7 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 
 func TestJailedValidatorsList(t *testing.T) {
 	cfg := DefaultChainCfg
-	cfg.Hardforks.Slashing.JailTime = 50
+	cfg.Protocol.Slashing.JailTime = 50
 	proof_author := addr(1)
 	test_voters_count := uint64(10)
 
@@ -380,7 +380,7 @@ func TestJailedValidatorsList(t *testing.T) {
 		result := test.ExecuteAndCheck(proof_author, big.NewInt(0), test.Pack("getJailBlock", proofs[i].author), util.ErrorString(""), util.ErrorString(""))
 		unjail_block := uint64(0)
 		test.Unpack(&unjail_block, "getJailBlock", result.CodeRetval)
-		expected_unjail := 1 + cfg.Hardforks.Slashing.JailTime + i*blocks_per_iteration
+		expected_unjail := 1 + cfg.Protocol.Slashing.JailTime + i*blocks_per_iteration
 		tc.Assert.Equal(int(expected_unjail), int(unjail_block))
 
 		if first_unjail_block == 0 {
@@ -416,7 +416,7 @@ func TestJailedValidatorsList(t *testing.T) {
 
 func TestDoubleJailing(t *testing.T) {
 	cfg := DefaultChainCfg
-	cfg.Hardforks.Slashing.JailTime = 50
+	cfg.Protocol.Slashing.JailTime = 50
 	privkey1, _ := addValidator(&cfg)
 	tc, test := test_utils.Init_test(slashing.ContractAddress(), slashing_sol.EblaSlashingClientMetaData, t, cfg)
 	defer test.End()

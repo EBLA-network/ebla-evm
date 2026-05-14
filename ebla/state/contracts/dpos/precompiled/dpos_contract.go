@@ -75,8 +75,7 @@ const (
 // native balance except through validator/delegator pool accounting, which
 // never references these funds.
 //
-// This is an EBLA-permanent feature, active from block 0. The Phalaenopsis
-// hardfork gate was removed in Phase 14.2.
+// This is an EBLA-permanent feature, active from block 0.
 //
 // Selector reservation: no current DPoS method has this selector. Any future
 // DPoS method MUST verify its selector != 0x44df8e70 before landing.
@@ -156,7 +155,7 @@ var (
 	field_eligible_vote_count = []byte{4}
 	field_amount_delegated    = []byte{5}
 
-	// Aspen hardfork new db fields
+	// Supply-cap db fields (12B EBLA hard cap accounting)
 	field_minted_tokens = []byte{6}
 	field_total_supply  = []byte{7}
 	field_yield         = []byte{8}
@@ -510,11 +509,6 @@ func (self *Contract) EndBlockCall(block_num uint64) {
 		self.storage.Put(storage.Stor_k_1(field_amount_delegated), self.amount_delegated.Bytes())
 		self.amount_delegated_orig = self.amount_delegated.Clone()
 	}
-
-	// Keeping it here for next HF
-	// if block_num == self.cfg.Hardforks.BambooHf.BlockNum {
-	// 	self.bambooHFRedelegation(block_num)
-	// }
 }
 
 // Should be called on each block commit - updates delayedStorage
@@ -2384,7 +2378,7 @@ func (self *Contract) undelegateInternal(
 	undelegation_id := self.undelegations.CreateUndelegation(delegator_addr, validator_addr, block, amount)
 	validator.UndelegationsCount++
 
-	// Persist validator state. Magnolia features are permanent in EBLA from block 0.
+	// Persist validator state. Slashing and validator-deletion rules are permanent in EBLA from block 0.
 	self.validators.ModifyValidator(validator_addr, validator)
 
 	// Emit canonical Undelegated event

@@ -21,8 +21,8 @@ import (
 	"math/big"
 
 	"github.com/EBLA-network/ebla-evm/common"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/util/keccak256"
+	"github.com/EBLA-network/ebla-evm/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

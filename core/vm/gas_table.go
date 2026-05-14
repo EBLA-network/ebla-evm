@@ -52,7 +52,7 @@ var (
 		Suicide:     5000,
 		ExpByte:     50,
 
-		CreateBySuicide: 25000,
+		CreateBySuicide:     25000,
 		WarmStorageReadCost: 100,
 	}
 )

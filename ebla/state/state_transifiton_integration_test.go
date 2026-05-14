@@ -15,8 +15,8 @@ import (
 
 	"github.com/EBLA-network/ebla-evm/core"
 	"github.com/EBLA-network/ebla-evm/core/types"
-	"github.com/EBLA-network/ebla-evm/params"
 	"github.com/EBLA-network/ebla-evm/ebla/data"
+	"github.com/EBLA-network/ebla-evm/params"
 )
 
 func TestEthMainnetSmoke(t *testing.T) {

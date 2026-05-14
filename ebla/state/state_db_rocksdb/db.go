@@ -60,8 +60,8 @@ func (self *DB) Init(opts Opts) *DB {
 		ret.SetCreateIfMissingColumnFamilies(true)
 		ret.IncreaseParallelism(runtime.NumCPU())
 		ret.SetMaxFileOpeningThreads(runtime.NumCPU())
-		ret.SetMaxOpenFiles(128) //Maybe even less
-		ret.SetMaxTotalWalSize(10 << 20) //10MB
+		ret.SetMaxOpenFiles(128)                         //Maybe even less
+		ret.SetMaxTotalWalSize(10 << 20)                 //10MB
 		ret.SetDbWriteBufferSize(1 * 1024 * 1024 * 1024) //1GB
 		//ret.SetEnablePipelinedWrite(true)
 		//ret.SetUseAdaptiveMutex(true)

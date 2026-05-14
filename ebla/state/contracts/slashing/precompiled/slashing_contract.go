@@ -283,7 +283,7 @@ func validateVoteSig(vote_hash *common.Hash, signature []byte) (*common.Address,
 
 // Jails validator and returns block number, until which he is jailed
 func (c *Contract) jailValidator(current_block types.BlockNum, validator *common.Address) types.BlockNum {
-	jail_block := current_block + c.cfg.Hardforks.Slashing.JailTime
+	jail_block := current_block + c.cfg.Protocol.Slashing.JailTime
 
 	var current_jail_block *types.BlockNum
 	db_key := contract_storage.Stor_k_1(field_validators_jail_block, validator.Bytes())

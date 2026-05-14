@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"unsafe"
 
-	"github.com/linxGnu/grocksdb"
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
+	"github.com/linxGnu/grocksdb"
 )
 
 type VersionedKey [common.HashLength + unsafe.Sizeof(types.BlockNum(0))]byte

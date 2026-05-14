@@ -3,9 +3,9 @@ package data
 import (
 	"os"
 
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
 	"github.com/EBLA-network/ebla-evm/ebla/util/files"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 var this_dir = files.ThisDirRelPath()

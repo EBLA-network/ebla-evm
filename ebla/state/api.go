@@ -6,11 +6,11 @@ import (
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
 	"github.com/EBLA-network/ebla-evm/core/vm"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/state/chain_config"
 	dpos "github.com/EBLA-network/ebla-evm/ebla/state/contracts/dpos/precompiled"
 	slashing "github.com/EBLA-network/ebla-evm/ebla/state/contracts/slashing/precompiled"
 	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/rlp"
 
 	"github.com/EBLA-network/ebla-evm/ebla/state/rewards_stats"
 	"github.com/EBLA-network/ebla-evm/ebla/state/state_db"
@@ -100,7 +100,7 @@ func (self *API) UpdateConfig(chain_cfg *chain_config.ChainConfig) {
 	self.dpos.UpdateConfig(config_update_block_num, *self.config)
 	self.rocksdb.SaveDPOSConfigChange(config_update_block_num, rlp.MustEncodeToBytes(self.config.DPOS))
 	// Is not updating DPOS contract config. Usually you cannot update its field without additional that processes it
-	// So it should be updated separately, for example in specific hardfork function
+	// So it should be updated separately, for example in a future protocol upgrade
 }
 
 func (self *API) Close() {

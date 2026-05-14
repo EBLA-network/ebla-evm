@@ -106,11 +106,11 @@ var (
 			TrxMinGasPrice:              1000000000,
 			TrxMaxGasLimit:              1,
 		},
-		Hardforks: chain_config.HardforksConfig{
+		Protocol: chain_config.ProtocolConfig{
 			Slashing: chain_config.SlashingConfig{
 				JailTime: 5,
 			},
-			AspenHf: chain_config.AspenHfConfig{
+			Supply: chain_config.SupplyConfig{
 				// Max token supply is 12 Billion EBLA -> 12e+9(12 billion) * 1e+18(ebla precision)
 				MaxSupply:        new(big.Int).Mul(big.NewInt(12e+9), big.NewInt(1e+18)),
 				GeneratedRewards: big.NewInt(0),
@@ -141,7 +141,7 @@ func CopyDefaultChainConfig() chain_config.ChainConfig {
 	new_cfg.DPOS.VoteEligibilityBalanceStep = DefaultChainCfg.DPOS.VoteEligibilityBalanceStep
 	new_cfg.DPOS.BlocksPerYear = DefaultChainCfg.DPOS.BlocksPerYear
 	new_cfg.DPOS.InitialValidators = DefaultChainCfg.DPOS.InitialValidators
-	new_cfg.Hardforks = DefaultChainCfg.Hardforks
+	new_cfg.Protocol = DefaultChainCfg.Protocol
 
 	return new_cfg
 }
@@ -588,11 +588,11 @@ func calculateExpectedBlockReward(total_stake *uint256.Int, expected_yield *uint
 	return expected_block_reward
 }
 
-func TestAspenHf(t *testing.T) {
-	// EBLA: All hardforks active from block 0. This test verifies the dynamic
+func TestYieldCurveAndSupplyCap(t *testing.T) {
+	// EBLA: All protocol features active from block 0. This test verifies the dynamic
 	// yield curve (epoch-based decay) produces correct rewards from genesis.
 	cfg := CopyDefaultChainConfig()
-	cfg.Hardforks.AspenHf.GeneratedRewards = big.NewInt(0)
+	cfg.Protocol.Supply.GeneratedRewards = big.NewInt(0)
 
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)
 	defer test.End()
@@ -601,7 +601,7 @@ func TestAspenHf(t *testing.T) {
 	for _, balance := range cfg.GenesisBalances {
 		total_supply.Add(total_supply, balance)
 	}
-	total_supply.Add(total_supply, cfg.Hardforks.AspenHf.GeneratedRewards)
+	total_supply.Add(total_supply, cfg.Protocol.Supply.GeneratedRewards)
 
 	validator1_addr, validator1_proof := generateAddrAndProof()
 	validator1_owner := addr(1)
@@ -1975,11 +1975,10 @@ func TestMakeLogsCheckTopics(t *testing.T) {
 }
 
 // TestBurnIntoDPoSContract verifies that the burn() method (selector 0x44df8e70)
-// is callable from block 0 without any hardfork gate, moves the sender's EBLA into
+// is callable from block 0 unconditionally, moves the sender's EBLA into
 // the DPoS contract's native balance, and returns no error.
 //
-// Phase 14.2 removed the Phalaenopsis hardfork gate. This test is the permanent
-// behavioral regression guard for the EBLA burn mechanism.
+// Permanent behavioral regression guard for the EBLA burn mechanism.
 func TestBurnIntoDPoSContract(t *testing.T) {
 	cfg := CopyDefaultChainConfig()
 	tc, test := test_utils.Init_test(dpos.ContractAddress(), dpos_sol.EblaDposClientMetaData, t, cfg)

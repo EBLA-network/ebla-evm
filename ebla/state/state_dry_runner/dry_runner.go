@@ -48,7 +48,7 @@ func (self *DryRunner) Apply(blk *vm.Block, trx *vm.Transaction) vm.ExecutionRes
 	trx.Nonce = bigutil.Add(block_state.GetAccount(&trx.From).GetNonce(), big.NewInt(1))
 	var evm vm.EVM
 	evm.Init(self.get_block_hash, block_state, vm.DefaultOpts(), self.chain_config.EVMChainConfig, vm.Config{})
-	evm.SetBlock(blk, self.chain_config.Hardforks.Rules(blk.Number))
+	evm.SetBlock(blk, self.chain_config.Protocol.Rules(blk.Number))
 	if self.dpos_api != nil {
 		self.dpos_api.InitAndRegisterAllContracts(contract_storage.EVMStateStorage{block_state}, blk.Number, self.get_reader, &evm, evm.RegisterPrecompiledContract)
 	}

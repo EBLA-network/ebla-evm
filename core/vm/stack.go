@@ -25,7 +25,7 @@ import (
 // expected to be changed and modified. stack does not take care of adding newly
 // initialised objects.
 type Stack struct {
-	data          []uint256.Int
+	data []uint256.Int
 }
 
 func newstack() *Stack {

@@ -28,10 +28,10 @@ import (
 	"github.com/EBLA-network/ebla-evm/core"
 	"github.com/EBLA-network/ebla-evm/core/types"
 	"github.com/EBLA-network/ebla-evm/core/vm"
-	"github.com/EBLA-network/ebla-evm/params"
 	"github.com/EBLA-network/ebla-evm/ebla/util"
 	"github.com/EBLA-network/ebla-evm/ebla/util/asserts"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
+	"github.com/EBLA-network/ebla-evm/params"
 	"github.com/linxGnu/grocksdb"
 )
 

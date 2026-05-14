@@ -24,7 +24,7 @@ type DelegatorUndelegations struct {
 	// list of validators addresses, from which delegator undelegated
 	Validators *contract_storage.AddressesIMap
 	// <validator address -> list of undelegations ids> as each delegator can have multiple undelegations from the same validator at the same time
-	// Note 1: used for post corvus hardfork undelegations processing
+	// Note 1: used for delegator-id-keyed undelegations processing
 	// Note 2: Undelegations_ids_map should contain only validators addresses that are also in Validators struct member
 	Undelegations_ids_map map[common.Address]*contract_storage.IdsIMap
 }

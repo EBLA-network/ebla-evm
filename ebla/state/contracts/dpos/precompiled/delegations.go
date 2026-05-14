@@ -5,8 +5,8 @@ import (
 
 	"github.com/EBLA-network/ebla-evm/common"
 	"github.com/EBLA-network/ebla-evm/core/types"
-	"github.com/EBLA-network/ebla-evm/rlp"
 	contract_storage "github.com/EBLA-network/ebla-evm/ebla/state/contracts/storage"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 type Delegation struct {

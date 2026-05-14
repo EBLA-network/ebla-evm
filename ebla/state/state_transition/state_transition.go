@@ -103,7 +103,7 @@ func (st *StateTransition) BlockNumber() types.BlockNum {
 func (st *StateTransition) BeginBlock(blk_info *vm.BlockInfo) {
 	st.begin_block()
 	blk_n := st.BlockNumber()
-	rules_changed := st.evm.SetBlock(&vm.Block{Number: blk_n, BlockInfo: *blk_info}, st.chain_config.Hardforks.Rules(blk_n))
+	rules_changed := st.evm.SetBlock(&vm.Block{Number: blk_n, BlockInfo: *blk_info}, st.chain_config.Protocol.Rules(blk_n))
 	if rules_changed {
 		st.applyHFChanges()
 	}

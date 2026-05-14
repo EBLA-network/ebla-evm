@@ -10,34 +10,31 @@ import (
 	"github.com/EBLA-network/ebla-evm/params"
 )
 
-// SlashingConfig contains slashing/jailing parameters.
-// Originally introduced by Taraxa's Magnolia hardfork; features are permanent in EBLA
-// from block 0, so the hardfork gate has been removed. Only the runtime JailTime
-// parameter remains.
+// SlashingConfig contains slashing / jailing parameters. Active from block 0.
 type SlashingConfig struct {
 	JailTime uint64 // number of blocks a double-voter stays jailed
 }
 
-// AspenHfConfig holds permanent supply-cap / yield-curve parameters in EBLA.
-// The original Taraxa "Aspen hardfork" block-number gates (part 1 = minted
-// tokens DB, part 2 = dynamic yield curve) were removed in Phase 14.3 —
-// both behaviors are now unconditional from block 0. Only the supply
-// invariants remain.
-type AspenHfConfig struct {
+// SupplyConfig holds permanent supply-cap parameters for EBLA. Active from block 0.
+//   - MaxSupply: 12B EBLA hard cap, enforced every block by processBlockReward.
+//   - GeneratedRewards: counter of rewards minted post-genesis, used by the
+//     supply-cap invariant.
+type SupplyConfig struct {
 	MaxSupply        *big.Int // 12 billion EBLA hard cap
 	GeneratedRewards *big.Int // genesis-seed amount counted against MaxSupply
 }
 
-// Leaving it here for next HF
-// type BambooRedelegation struct {
-// 	Validator common.Address
-// 	Amount    *big.Int
-// }
-
-type HardforksConfig struct {
+// ProtocolConfig holds the permanent EBLA protocol parameters set at genesis
+// and unchanged for the lifetime of the chain.
+//
+// RLP wire format: field declaration order is load-bearing.
+// The C++-side mirror (libraries/config/include/config/protocol_config.hpp
+// :: ProtocolConfig) MUST declare its fields in the same order.
+// Do not reorder.
+type ProtocolConfig struct {
 	RewardsDistributionFrequency map[uint64]uint32
 	Slashing                     SlashingConfig
-	AspenHf                      AspenHfConfig
+	Supply                       SupplyConfig
 }
 
 func isForked(fork_start, block_num types.BlockNum) bool {
@@ -47,7 +44,9 @@ func isForked(fork_start, block_num types.BlockNum) bool {
 	return fork_start <= block_num
 }
 
-func (c *HardforksConfig) Rules(num types.BlockNum) vm.Rules {
+// Rules returns the per-block EVM rules. Empty since Phase 14.3; reserved
+// for future protocol upgrades that may need per-block flag gating.
+func (c *ProtocolConfig) Rules(num types.BlockNum) vm.Rules {
 	return vm.Rules{}
 }
 
@@ -78,11 +77,13 @@ type DPOSConfig = struct {
 	InitialValidators           []GenesisValidator
 }
 
+// ChainConfig field order must match C++'s ebla::state_api::Config.
+// Position 4 (Protocol) must align with C++ position 4 (protocol).
 type ChainConfig struct {
 	EVMChainConfig  params.ChainConfig
 	GenesisBalances core.BalanceMap
 	DPOS            DPOSConfig
-	Hardforks       HardforksConfig
+	Protocol        ProtocolConfig
 }
 
 func (self *ChainConfig) GenesisBalancesSum() *big.Int {

@@ -38,7 +38,7 @@ const (
 //
 // CONSENSUS-CRITICAL: This table is part of EBLA's economic consensus.
 // Modifying any entry changes the chain's emission schedule. Any change
-// requires a coordinated hardfork. Verified against the canonical formula
+// requires a coordinated protocol upgrade. Verified against the canonical formula
 // by TestEblaYieldTableMatchesFormula in dpos_test.go (CI-gated).
 //
 // Generation reference (Python):
@@ -94,7 +94,7 @@ type YieldCurve struct {
 func (self *YieldCurve) Init(cfg chain_config.ChainConfig) {
 	self.cfg = cfg
 
-	max_supply, overflow := uint256.FromBig(self.cfg.Hardforks.AspenHf.MaxSupply)
+	max_supply, overflow := uint256.FromBig(self.cfg.Protocol.Supply.MaxSupply)
 	asserts.Holds(overflow == false, "YieldCurve max supply overflow")
 	self.max_supply = max_supply
 
@@ -142,10 +142,10 @@ func (self *YieldCurve) CalculateBlockReward(current_total_delegation *uint256.I
 }
 
 // CalculateTotalSupply computes total supply from genesis balances + minted tokens + generated rewards.
-// Used during Aspen hardfork transition to initialize total_supply from legacy minted_tokens counter.
+// Initializes total_supply from genesis balances + legacy minted_tokens counter + generated rewards.
 func (self *YieldCurve) CalculateTotalSupply(minted_tokens *uint256.Int) *uint256.Int {
 	total_supply := bigutil.Add(self.cfg.GenesisBalancesSum(), minted_tokens.ToBig())
-	total_supply.Add(total_supply, self.cfg.Hardforks.AspenHf.GeneratedRewards)
+	total_supply.Add(total_supply, self.cfg.Protocol.Supply.GeneratedRewards)
 
 	total_supply_uint256, overflow := uint256.FromBig(total_supply)
 	asserts.Holds(overflow == false, "CalculateTotalSupply: Genesis balances sum overflow")

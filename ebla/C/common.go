@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/EBLA-network/ebla-evm/rlp"
 	"github.com/EBLA-network/ebla-evm/ebla/util/bin"
+	"github.com/EBLA-network/ebla-evm/rlp"
 )
 
 func dec_rlp(enc C.ebla_evm_Bytes, out interface{}) {
